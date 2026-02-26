@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { cliente, user, devolucion } from "@/db/schema";
+import { cliente, pagoCliente, user, devolucion } from "@/db/schema";
 import { getServerSession } from "@/lib/auth-helpers";
 import { eq, and, gte, lte, sql, sum } from "drizzle-orm";
 import type { AppSession } from "@/types";
@@ -38,15 +38,19 @@ export async function GET(request: NextRequest) {
       clientesActivos: sql<number>`count(*) filter (where ${cliente.estado} in ('pagado','activo'))`,
       clientesPendientes: sql<number>`count(*) filter (where ${cliente.estado} in ('pendiente_pago','pendiente'))`,
       clientesPendienteAdmin: sql<number>`count(*) filter (where ${cliente.estado} in ('pendiente_confirmacion','pendiente_admin'))`,
-      totalIngresos: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.estado} in ('pagado','activo')),0)`,
-      ingresoEfectivo: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.formaPago}='efectivo' and ${cliente.estado} in ('pagado','activo')),0)`,
-      ingresoTransferencia: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.formaPago}='transferencia' and ${cliente.estado} in ('pagado','activo')),0)`,
-      ingresoTarjeta: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.formaPago}='tarjeta' and ${cliente.estado} in ('pagado','activo')),0)`,
     }).from(cliente).where(where);
+
+    // Ingresos reales desde pago_cliente
+    const [pagos] = await db.select({
+      totalIngresos: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric),0)`,
+      ingresoEfectivo: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='efectivo'),0)`,
+      ingresoTransferencia: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='transferencia'),0)`,
+      ingresoTarjeta: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='tarjeta'),0)`,
+    }).from(pagoCliente);
 
     // Total devoluciones
     const [devs] = await db.select({ total: sql<number>`coalesce(sum(${devolucion.monto}::numeric),0)` }).from(devolucion);
-    return NextResponse.json({ ...stats, totalDevoluciones: devs.total });
+    return NextResponse.json({ ...stats, ...pagos, totalDevoluciones: devs.total });
   }
 
   if (tipo === "por_agente") {
@@ -55,10 +59,11 @@ export async function GET(request: NextRequest) {
       agenteName: user.name,
       totalClientes: sql<number>`count(*)`,
       clientesActivos: sql<number>`count(*) filter (where ${cliente.estado} in ('pagado','activo'))`,
-      totalIngresos: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.estado} in ('pagado','activo')),0)`,
+      totalIngresos: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric),0)`,
     })
       .from(cliente)
       .leftJoin(user, eq(cliente.agenteId, user.id))
+      .leftJoin(pagoCliente, eq(pagoCliente.clienteId, cliente.id))
       .where(where)
       .groupBy(cliente.agenteId, user.name);
     return NextResponse.json(agentes);
