@@ -26,10 +26,13 @@ export async function GET(request: NextRequest) {
       ingresoTransferencia: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='transferencia'), 0)`,
       ingresoTarjeta: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='tarjeta'), 0)`,
       totalPagos: sql<number>`count(*)`,
-    }).from(pagoCliente).where(and(
-      gte(pagoCliente.creadoEn, diaInicio),
-      lte(pagoCliente.creadoEn, diaFin)
-    ));
+    }).from(pagoCliente)
+      .innerJoin(cliente, eq(pagoCliente.clienteId, cliente.id))
+      .where(and(
+        gte(pagoCliente.creadoEn, diaInicio),
+        lte(pagoCliente.creadoEn, diaFin),
+        sql`${cliente.estado} in ('pagado','activo')`
+      ));
 
     const [{ totalClientes }] = await db.select({
       totalClientes: sql<number>`count(*)`,
