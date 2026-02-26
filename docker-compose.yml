@@ -1,0 +1,28 @@
+services:
+  app:
+    build: .
+    container_name: multitravel-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      - NODE_ENV=production
+      - UPLOAD_DIR=/var/www/multitravel/uploads
+    volumes:
+      - uploads:/var/www/multitravel/uploads
+    ports:
+      - "3000:3000"
+    networks:
+      - multitravel-net
+
+volumes:
+  uploads:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: /var/www/multitravel/uploads
+
+networks:
+  multitravel-net:
+    driver: bridge

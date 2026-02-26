@@ -1,0 +1,28 @@
+tu-dominio.com {
+    # HTTPS automático con Let's Encrypt
+    
+    # Proxy a Next.js
+    reverse_proxy localhost:3000
+    
+    # Logs
+    log {
+        output file /var/log/caddy/multitravel.log
+        format json
+    }
+    
+    # Headers de seguridad
+    header {
+        X-Content-Type-Options nosniff
+        X-Frame-Options SAMEORIGIN
+        X-XSS-Protection "1; mode=block"
+        -Server
+    }
+    
+    # Compresión
+    encode gzip
+}
+
+# Redirigir www a no-www (opcional)
+www.tu-dominio.com {
+    redir https://tu-dominio.com{uri} permanent
+}
