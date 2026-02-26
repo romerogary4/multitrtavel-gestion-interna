@@ -38,10 +38,10 @@ export async function GET(request: NextRequest) {
       clientesActivos: sql<number>`count(*) filter (where ${cliente.estado} in ('pagado','activo'))`,
       clientesPendientes: sql<number>`count(*) filter (where ${cliente.estado} in ('pendiente_pago','pendiente'))`,
       clientesPendienteAdmin: sql<number>`count(*) filter (where ${cliente.estado} in ('pendiente_confirmacion','pendiente_admin'))`,
-      totalIngresos: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric),0)`,
-      ingresoEfectivo: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.formaPago}='efectivo'),0)`,
-      ingresoTransferencia: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.formaPago}='transferencia'),0)`,
-      ingresoTarjeta: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.formaPago}='tarjeta'),0)`,
+      totalIngresos: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.estado} in ('pagado','activo')),0)`,
+      ingresoEfectivo: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.formaPago}='efectivo' and ${cliente.estado} in ('pagado','activo')),0)`,
+      ingresoTransferencia: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.formaPago}='transferencia' and ${cliente.estado} in ('pagado','activo')),0)`,
+      ingresoTarjeta: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.formaPago}='tarjeta' and ${cliente.estado} in ('pagado','activo')),0)`,
     }).from(cliente).where(where);
 
     // Total devoluciones
@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
       agenteName: user.name,
       totalClientes: sql<number>`count(*)`,
       clientesActivos: sql<number>`count(*) filter (where ${cliente.estado} in ('pagado','activo'))`,
-      totalIngresos: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric),0)`,
+      totalIngresos: sql<number>`coalesce(sum(${cliente.montoPagado}::numeric) filter (where ${cliente.estado} in ('pagado','activo')),0)`,
     })
       .from(cliente)
       .leftJoin(user, eq(cliente.agenteId, user.id))
