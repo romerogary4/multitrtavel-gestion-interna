@@ -14,7 +14,7 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       { protocol: "http", hostname: "localhost" },
       // En producción, añadir solo tu dominio real:
-      // { protocol: "https", hostname: "tu-dominio.com" },
+      // { protocol: "https", hostname: "app.multitravelcherrymatute.com" },
     ],
   },
 
