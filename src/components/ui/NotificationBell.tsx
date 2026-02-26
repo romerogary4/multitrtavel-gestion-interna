@@ -102,36 +102,72 @@ export function NotificationBell({ asMenuItem = false }: { asMenuItem?: boolean 
     return (
         <div ref={ref} style={{ position: "relative" }}>
             {/* Botón campana */}
-            <button
-                onClick={() => setOpen((o: boolean) => !o)}
-                style={{
-                    position: "relative", background: open ? "#f5f5f5" : "none", border: "none",
-                    cursor: "pointer", padding: "6px", borderRadius: 10,
-                    transition: "all 0.15s", flexShrink: 0,
-                    color: open ? "#cc1111" : "#6b7280",
-                }}
-                onMouseEnter={(e: React.MouseEvent) => (e.currentTarget as HTMLElement).style.background = "#f5f5f5"}
-                onMouseLeave={(e: React.MouseEvent) => (e.currentTarget as HTMLElement).style.background = "none"}
-                title="Notificaciones"
-            >
-                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
-                    <path d="M13.73 21a2 2 0 0 1-3.46 0" />
-                </svg>
-                {noLeidas > 0 && (
-                    <span style={{
-                        position: "absolute", top: 4, right: 4,
-                        background: "#cc1111", color: "white",
-                        fontSize: 10, fontWeight: 800,
-                        minWidth: 16, height: 16, borderRadius: 99,
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        padding: "0 4px", lineHeight: 1,
-                        border: "2px solid white",
-                    }}>
-                        {noLeidas > 99 ? "99+" : noLeidas}
+            {asMenuItem ? (
+                <button
+                    onClick={() => setOpen((o: boolean) => !o)}
+                    style={{
+                        display: "flex", alignItems: "center", gap: 10,
+                        padding: "9px 12px", borderRadius: 10, border: "none",
+                        background: open ? "#f5f5f5" : "transparent",
+                        cursor: "pointer", fontFamily: "inherit", width: "100%", textAlign: "left",
+                        transition: "all 0.15s",
+                    }}
+                    onMouseEnter={(e: React.MouseEvent<HTMLButtonElement>) => { (e.currentTarget as HTMLElement).style.background = "#f5f5f5"; }}
+                    onMouseLeave={(e: React.MouseEvent<HTMLButtonElement>) => { (e.currentTarget as HTMLElement).style.background = open ? "#f5f5f5" : "transparent"; }}
+                >
+                    <div style={{ position: "relative", flexShrink: 0, width: 22, display: "flex", alignItems: "center", justifyContent: "center" }}>
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                            stroke={open || noLeidas > 0 ? "#cc1111" : "#6b7280"}
+                            strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                            <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                        </svg>
+                        {noLeidas > 0 && (
+                            <span style={{
+                                position: "absolute", top: -4, right: -4,
+                                background: "#cc1111", color: "white",
+                                fontSize: 8, fontWeight: 800, minWidth: 14, height: 14, borderRadius: 99,
+                                display: "flex", alignItems: "center", justifyContent: "center",
+                                padding: "0 3px", lineHeight: 1, border: "1.5px solid white",
+                            }}>{noLeidas > 99 ? "99+" : noLeidas}</span>
+                        )}
+                    </div>
+                    <span style={{ fontSize: 13.5, fontWeight: 500, color: open || noLeidas > 0 ? "#cc1111" : "#6b7280" }}>
+                        Notificaciones
+                        {noLeidas > 0 && <span style={{ fontSize: 11, marginLeft: 6 }}>· {noLeidas} nueva{noLeidas > 1 ? "s" : ""}</span>}
                     </span>
-                )}
-            </button>
+                </button>
+            ) : (
+                <button
+                    onClick={() => setOpen((o: boolean) => !o)}
+                    style={{
+                        position: "relative", background: open ? "#f5f5f5" : "none", border: "none",
+                        cursor: "pointer", padding: "6px", borderRadius: 10,
+                        transition: "all 0.15s", flexShrink: 0,
+                        color: open ? "#cc1111" : "#6b7280",
+                    }}
+                    onMouseEnter={(e: React.MouseEvent) => (e.currentTarget as HTMLElement).style.background = "#f5f5f5"}
+                    onMouseLeave={(e: React.MouseEvent) => (e.currentTarget as HTMLElement).style.background = "none"}
+                    title="Notificaciones"
+                >
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" />
+                        <path d="M13.73 21a2 2 0 0 1-3.46 0" />
+                    </svg>
+                    {noLeidas > 0 && (
+                        <span style={{
+                            position: "absolute", top: 4, right: 4,
+                            background: "#cc1111", color: "white",
+                            fontSize: 10, fontWeight: 800,
+                            minWidth: 16, height: 16, borderRadius: 99,
+                            display: "flex", alignItems: "center", justifyContent: "center",
+                            padding: "0 4px", lineHeight: 1, border: "2px solid white",
+                        }}>
+                            {noLeidas > 99 ? "99+" : noLeidas}
+                        </span>
+                    )}
+                </button>
+            )}
 
             {/* Dropdown */}
             {open && (

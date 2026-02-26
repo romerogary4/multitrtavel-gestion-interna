@@ -48,9 +48,9 @@ export function Sidebar() {
     <>
       <aside className="sidebar">
         <div className="sidebar-brand">
-          <div style={{ display: "flex", alignItems: "center", gap: 12, justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{
-              width: 46, height: 46, borderRadius: 12, overflow: "hidden",
+              width: 54, height: 54, borderRadius: 14, overflow: "hidden",
               background: "#f8f8f8", border: "1.5px solid #ebebeb", flexShrink: 0
             }}>
               <img src="/logo.jpg" alt="Logo"
