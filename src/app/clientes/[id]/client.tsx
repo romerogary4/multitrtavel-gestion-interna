@@ -389,6 +389,7 @@ export function ClienteDetailClient({ clienteData: initial, esAdmin, sessionUser
             pagos={data.tipoPago !== "plazo" ? data.pagos : []}
             onLightbox={setLightbox}
             getFileUrl={getFileUrl}
+            esAdmin={esAdmin}
           />
 
           {/* Devoluciones */}
@@ -667,9 +668,9 @@ export function ClienteDetailClient({ clienteData: initial, esAdmin, sessionUser
 }
 
 // ── Sección documentos ──────────────────────────────────────────────────────
-function DocumentosSection({ clienteId, documentos: inicial, pagos, onLightbox, getFileUrl }: {
+function DocumentosSection({ clienteId, documentos: inicial, pagos, onLightbox, getFileUrl, esAdmin }: {
   clienteId: string; documentos: Documento[]; pagos: Pago[];
-  onLightbox: (url: string) => void; getFileUrl: (r: string) => string;
+  onLightbox: (url: string) => void; getFileUrl: (r: string) => string; esAdmin: boolean;
 }) {
   const [docs, setDocs] = useState(inicial);
   const [uploading, setUploading] = useState(false);
@@ -799,14 +800,16 @@ function DocumentosSection({ clienteId, documentos: inicial, pagos, onLightbox, 
                       }}>
                       Ver
                     </a>
-                    <button onClick={() => eliminar(doc.id)}
-                      style={{
-                        fontSize: 12, color: "#cc1111", background: "#fff0f0",
-                        border: "1px solid #fca5a5", borderRadius: 8, padding: "4px 10px",
-                        cursor: "pointer", fontFamily: "inherit"
-                      }}>
-                      ✕
-                    </button>
+                    {esAdmin && (
+                      <button onClick={() => eliminar(doc.id)}
+                        style={{
+                          fontSize: 12, color: "#cc1111", background: "#fff0f0",
+                          border: "1px solid #fca5a5", borderRadius: 8, padding: "4px 10px",
+                          cursor: "pointer", fontFamily: "inherit"
+                        }}>
+                        ✕
+                      </button>
+                    )}
                   </div>
                 </div>
               );
