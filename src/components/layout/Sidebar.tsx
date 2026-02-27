@@ -28,7 +28,11 @@ export function Sidebar() {
   const { data: session } = useSession();
   const esAdmin = (session?.user as any)?.rol === "administrador";
   const [todoOpen, setTodoOpen] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const { pendientes: tareasPendientes, vencidas: tareasVencidas } = useTareasBadge();
+
+  // Cerrar sidebar al navegar en móvil
+  useEffect(() => { setMobileOpen(false); }, [pathname]);
 
   const userName = session?.user?.name || "Usuario";
   const userRol = (session?.user as any)?.rol || "agente";
@@ -46,7 +50,31 @@ export function Sidebar() {
 
   return (
     <>
-      <aside className="sidebar">
+      {/* Overlay móvil */}
+      {mobileOpen && (
+        <div className="sidebar-overlay active" onClick={() => setMobileOpen(false)} />
+      )}
+
+      {/* Botón hamburguesa móvil */}
+      <button
+        onClick={() => setMobileOpen(o => !o)}
+        style={{
+          display: "none",
+          position: "fixed", top: 14, left: 14, zIndex: 101,
+          width: 40, height: 40, borderRadius: 10, border: "1.5px solid #e0e0e8",
+          background: "white", cursor: "pointer", alignItems: "center",
+          justifyContent: "center", flexDirection: "column", gap: 4,
+          boxShadow: "0 2px 8px rgba(0,0,0,0.1)",
+        }}
+        className="sidebar-toggle"
+        aria-label="Menú"
+      >
+        <span style={{ width: 16, height: 2, background: "#374151", borderRadius: 2, display: "block", transition: "all 0.2s", transform: mobileOpen ? "rotate(45deg) translate(4px, 4px)" : "none" }} />
+        <span style={{ width: 16, height: 2, background: "#374151", borderRadius: 2, display: "block", opacity: mobileOpen ? 0 : 1, transition: "all 0.2s" }} />
+        <span style={{ width: 16, height: 2, background: "#374151", borderRadius: 2, display: "block", transition: "all 0.2s", transform: mobileOpen ? "rotate(-45deg) translate(4px, -4px)" : "none" }} />
+      </button>
+
+      <aside className={`sidebar${mobileOpen ? " sidebar-open" : ""}`}>
         <div className="sidebar-brand">
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{

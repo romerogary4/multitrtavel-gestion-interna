@@ -42,7 +42,7 @@ export async function GET(request: NextRequest) {
       where: and(
         gte(cliente.creadoEn, diaInicio),
         lte(cliente.creadoEn, diaFin),
-        sql`${cliente.estado} in ('pagado','activo')`
+        sql`${cliente.estado} not in ('cancelado','devuelto')`
       ),
       with: {
         paquete: { columns: { nombre: true } },

@@ -12,7 +12,7 @@ interface Cliente {
   paquete?: { nombre: string }; agente?: { name: string };
 }
 
-const ESTADOS = ["todos", "pendiente", "pendiente_admin", "activo", "cancelado"];
+const ESTADOS = ["todos", "pagado", "pendiente_pago", "pendiente_confirmacion", "pendiente_admin", "activo", "cancelado", "devuelto"];
 const PAGOS = ["todos", "efectivo", "transferencia", "tarjeta"];
 
 export default function ClientesPage() {
@@ -43,7 +43,14 @@ export default function ClientesPage() {
   const totalPags = Math.ceil(total / POR_PAG);
 
   const estadoLabel: Record<string, string> = {
-    pendiente: "Pendiente", pendiente_admin: "Pend. admin", activo: "Activo", cancelado: "Cancelado"
+    pagado: "Pagado",
+    pendiente_pago: "Pend. pago",
+    pendiente_confirmacion: "Pend. confirmación",
+    pendiente_admin: "Pend. admin",
+    activo: "Activo",
+    cancelado: "Cancelado",
+    devuelto: "Devuelto",
+    pendiente: "Pendiente",
   };
 
   return (
@@ -92,71 +99,73 @@ export default function ClientesPage() {
 
       {/* Tabla */}
       <div className="card" style={{ overflow: "hidden" }}>
-        {loading ? (
-          <div style={{ padding: 64, textAlign: "center", color: "#9ca3af" }}>Cargando clientes...</div>
-        ) : clientes.length === 0 ? (
-          <div style={{ padding: 64, textAlign: "center", color: "#9ca3af" }}>
-            <p style={{ fontSize: 36, marginBottom: 12 }}>👥</p>
-            <p>No se encontraron clientes</p>
-          </div>
-        ) : (
-          <table className="data-table">
-            <thead>
-              <tr>
-                <th>Cliente</th>
-                <th>Contacto</th>
-                <th>Paquete</th>
-                {esAdmin && <th>Agente</th>}
-                <th>Pago</th>
-                <th style={{ textAlign: "right" }}>Monto</th>
-                <th style={{ textAlign: "center" }}>Estado</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clientes.map(c => (
-                <tr key={c.id} style={{ cursor: "pointer" }}
-                  onClick={() => window.location.href = `/clientes/${c.id}`}>
-                  <td>
-                    <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-                      <div style={{
-                        width: 38, height: 38, borderRadius: 10, flexShrink: 0,
-                        background: "linear-gradient(135deg,#cc1111,#e52222)", color: "white",
-                        display: "flex", alignItems: "center", justifyContent: "center",
-                        fontWeight: 800, fontSize: 14
-                      }}>
-                        {c.nombre.charAt(0)}
-                      </div>
-                      <div>
-                        <p style={{ fontWeight: 600, color: "#111", fontSize: 14 }}>
-                          {c.nombre} {c.apellidos}
-                        </p>
-                        {c.destino && <p style={{ fontSize: 12, color: "#9ca3af" }}>✈ {c.destino}</p>}
-                      </div>
-                    </div>
-                  </td>
-                  <td>
-                    <p style={{ fontSize: 13, color: "#374151" }}>{c.telefono}</p>
-                    {c.email && <p style={{ fontSize: 12, color: "#9ca3af" }}>{c.email}</p>}
-                  </td>
-                  <td style={{ fontSize: 13, color: "#374151" }}>{c.paquete?.nombre || "—"}</td>
-                  {esAdmin && <td style={{ fontSize: 13, color: "#374151" }}>{c.agente?.name || "—"}</td>}
-                  <td style={{ fontSize: 13, color: "#374151", textTransform: "capitalize" }}>
-                    {c.formaPago || "—"}
-                  </td>
-                  <td style={{ textAlign: "right", fontWeight: 700, color: "#cc1111" }}>
-                    {c.montoPagado ? formatCurrency(c.montoPagado) : "—"}
-                  </td>
-                  <td style={{ textAlign: "center" }}>
-                    <span className={`badge badge-${c.estado}`}>
-                      {estadoLabel[c.estado] || c.estado}
-                    </span>
-                  </td>
+        <div className="data-table-wrapper">
+          {loading ? (
+            <div style={{ padding: 64, textAlign: "center", color: "#9ca3af" }}>Cargando clientes...</div>
+          ) : clientes.length === 0 ? (
+            <div style={{ padding: 64, textAlign: "center", color: "#9ca3af" }}>
+              <p style={{ fontSize: 36, marginBottom: 12 }}>👥</p>
+              <p>No se encontraron clientes</p>
+            </div>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Cliente</th>
+                  <th>Contacto</th>
+                  <th>Paquete</th>
+                  {esAdmin && <th>Agente</th>}
+                  <th>Pago</th>
+                  <th style={{ textAlign: "right" }}>Monto</th>
+                  <th style={{ textAlign: "center" }}>Estado</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        )}
+              </thead>
+              <tbody>
+                {clientes.map(c => (
+                  <tr key={c.id} style={{ cursor: "pointer" }}
+                    onClick={() => window.location.href = `/clientes/${c.id}`}>
+                    <td>
+                      <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                        <div style={{
+                          width: 38, height: 38, borderRadius: 10, flexShrink: 0,
+                          background: "linear-gradient(135deg,#cc1111,#e52222)", color: "white",
+                          display: "flex", alignItems: "center", justifyContent: "center",
+                          fontWeight: 800, fontSize: 14
+                        }}>
+                          {c.nombre.charAt(0)}
+                        </div>
+                        <div>
+                          <p style={{ fontWeight: 600, color: "#111", fontSize: 14 }}>
+                            {c.nombre} {c.apellidos}
+                          </p>
+                          {c.destino && <p style={{ fontSize: 12, color: "#9ca3af" }}>✈ {c.destino}</p>}
+                        </div>
+                      </div>
+                    </td>
+                    <td>
+                      <p style={{ fontSize: 13, color: "#374151" }}>{c.telefono}</p>
+                      {c.email && <p style={{ fontSize: 12, color: "#9ca3af" }}>{c.email}</p>}
+                    </td>
+                    <td style={{ fontSize: 13, color: "#374151" }}>{c.paquete?.nombre || "—"}</td>
+                    {esAdmin && <td style={{ fontSize: 13, color: "#374151" }}>{c.agente?.name || "—"}</td>}
+                    <td style={{ fontSize: 13, color: "#374151", textTransform: "capitalize" }}>
+                      {c.formaPago || "—"}
+                    </td>
+                    <td style={{ textAlign: "right", fontWeight: 700, color: "#cc1111" }}>
+                      {c.montoPagado ? formatCurrency(c.montoPagado) : "—"}
+                    </td>
+                    <td style={{ textAlign: "center" }}>
+                      <span className={`badge badge-${c.estado}`}>
+                        {estadoLabel[c.estado] || c.estado}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
 
+        </div>
         {/* Paginación */}
         {totalPags > 1 && (
           <div style={{

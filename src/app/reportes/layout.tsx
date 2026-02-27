@@ -6,8 +6,8 @@ export default async function Layout({ children }: { children: React.ReactNode }
   return (
     <div style={{ display: "flex", minHeight: "100vh" }}>
       <Sidebar />
-      <main style={{ flex: 1, marginLeft: 240, minHeight: "100vh", background: "#f4f4f6" }}>
-        <div style={{ padding: "36px 40px", maxWidth: 1280, margin: "0 auto" }}>
+      <main className="main-content" style={{ flex: 1, minHeight: "100vh", background: "#f4f4f6" }}>
+        <div style={{ maxWidth: 1280, margin: "0 auto" }}>
           {children}
         </div>
       </main>

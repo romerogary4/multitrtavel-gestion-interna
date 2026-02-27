@@ -253,7 +253,7 @@ export default function CuadreDiarioPage() {
       ) : (
         <>
           {/* KPIs */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 24 }}>
+          <div className="kpi-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginBottom: 24 }}>
             {[
               { label: "Total ingresos", value: formatCurrency(totalIngresos), accent: "#16a34a", icon: "💰" },
               { label: "Total gastos", value: formatCurrency(totalGastos), accent: "#cc1111", icon: "📤" },
@@ -280,7 +280,7 @@ export default function CuadreDiarioPage() {
             ))}
           </div>
 
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
+          <div className="grid-2" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 20 }}>
             {/* Ingresos */}
             <div className="card" style={{ padding: 24 }}>
               <h3 style={{
@@ -435,7 +435,7 @@ export default function CuadreDiarioPage() {
                   </button>
                 ))}
               </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 140px", gap: 10, alignItems: "end" }}>
+              <div className="gasto-form-grid" style={{ display: "grid", gridTemplateColumns: "1fr 140px 120px 140px", gap: 10, alignItems: "end" }}>
                 <div>
                   <label style={{ fontSize: 12, fontWeight: 600, color: "#374151", display: "block", marginBottom: 6 }}>
                     {gastoFijoActual.campo}{tipoGasto !== "otro" && " *"}
@@ -517,7 +517,7 @@ export default function CuadreDiarioPage() {
 
           {/* Botones */}
           {!cerrado && (
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }} className="grid-2">
               <button onClick={guardarBorrador} disabled={guardando} className="btn-secondary"
                 style={{ padding: 14, fontSize: 14 }}>
                 {guardando ? "Guardando..." : "💾 Guardar borrador"}

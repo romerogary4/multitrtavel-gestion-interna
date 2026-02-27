@@ -40,13 +40,16 @@ export async function GET(request: NextRequest) {
       clientesPendienteAdmin: sql<number>`count(*) filter (where ${cliente.estado} in ('pendiente_confirmacion','pendiente_admin'))`,
     }).from(cliente).where(where);
 
-    // Ingresos reales desde pago_cliente
+    // Ingresos reales desde pago_cliente (con filtros de fecha si aplica)
+    const pagoConditions = [];
+    if (desde) { const d = new Date(desde); d.setHours(0, 0, 0, 0); pagoConditions.push(gte(pagoCliente.creadoEn, d)); }
+    if (hasta) { const h = new Date(hasta); h.setHours(23, 59, 59, 999); pagoConditions.push(lte(pagoCliente.creadoEn, h)); }
     const [pagos] = await db.select({
       totalIngresos: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric),0)`,
       ingresoEfectivo: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='efectivo'),0)`,
       ingresoTransferencia: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='transferencia'),0)`,
       ingresoTarjeta: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='tarjeta'),0)`,
-    }).from(pagoCliente);
+    }).from(pagoCliente).where(pagoConditions.length > 0 ? and(...pagoConditions) : undefined);
 
     // Total devoluciones
     const [devs] = await db.select({ total: sql<number>`coalesce(sum(${devolucion.monto}::numeric),0)` }).from(devolucion);
