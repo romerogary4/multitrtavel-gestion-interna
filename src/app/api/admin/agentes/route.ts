@@ -22,6 +22,7 @@ export async function GET(request: NextRequest) {
       rol: true,
       activo: true,
       createdAt: true,
+      image: true,
     },
     orderBy: (u, { asc }) => [asc(u.name)],
   });
