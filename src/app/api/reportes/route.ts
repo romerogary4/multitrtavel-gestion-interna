@@ -49,10 +49,19 @@ export async function GET(request: NextRequest) {
       ingresoEfectivo: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='efectivo'),0)`,
       ingresoTransferencia: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='transferencia'),0)`,
       ingresoTarjeta: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='tarjeta'),0)`,
-    }).from(pagoCliente).where(pagoConditions.length > 0 ? and(...pagoConditions) : undefined);
+    }).from(pagoCliente)
+      .where(and(
+        ...(pagoConditions.length > 0 ? pagoConditions : []),
+        eq(pagoCliente.confirmado, true)
+      ));
 
-    // Total devoluciones
-    const [devs] = await db.select({ total: sql<number>`coalesce(sum(${devolucion.monto}::numeric),0)` }).from(devolucion);
+    // Total devoluciones (con filtro de fecha si aplica)
+    const devConditions = [];
+    if (desde) { const d = new Date(desde); d.setHours(0, 0, 0, 0); devConditions.push(gte(devolucion.creadoEn, d)); }
+    if (hasta) { const h = new Date(hasta); h.setHours(23, 59, 59, 999); devConditions.push(lte(devolucion.creadoEn, h)); }
+    const [devs] = await db.select({ total: sql<number>`coalesce(sum(${devolucion.monto}::numeric),0)` })
+      .from(devolucion)
+      .where(devConditions.length > 0 ? and(...devConditions) : undefined);
     return NextResponse.json({ ...stats, ...pagos, totalDevoluciones: devs.total });
   }
 
@@ -62,7 +71,7 @@ export async function GET(request: NextRequest) {
       agenteName: user.name,
       totalClientes: sql<number>`count(*)`,
       clientesActivos: sql<number>`count(*) filter (where ${cliente.estado} in ('pagado','activo'))`,
-      totalIngresos: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric),0)`,
+      totalIngresos: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.confirmado} = true),0)`,
     })
       .from(cliente)
       .leftJoin(user, eq(cliente.agenteId, user.id))

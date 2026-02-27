@@ -147,6 +147,9 @@ export const pagoCliente = pgTable("pago_cliente", {
   comprobante: text("comprobante"),    // ruta del archivo
   notas: text("notas"),
   registradoPor: text("registrado_por").references(() => user.id),
+  confirmado: boolean("confirmado").notNull().default(false),
+  confirmadoEn: timestamp("confirmado_en"),
+  confirmadoPor: text("confirmado_por").references(() => user.id),
   creadoEn: timestamp("creado_en").notNull().defaultNow(),
 }, (t) => [
   { name: "pago_cliente_idx", columns: [t.clienteId] },

@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { cliente } from "@/db/schema";
+import { cliente, pagoCliente } from "@/db/schema";
+import { eq } from "drizzle-orm";
 import { getServerSession } from "@/lib/auth-helpers";
 import { crearNotificacion } from "@/lib/notificaciones";
 import type { AppSession } from "@/types";
-import { eq } from "drizzle-orm";
 import { saveFile, ALLOWED_DOC_TYPES, validateFile } from "@/lib/upload";
 
 export async function PATCH(request: NextRequest) {
@@ -32,6 +32,17 @@ export async function PATCH(request: NextRequest) {
       const totalReq = Number(cli.montoTotal || 0);
       const completo = totalReq > 0 && totalPagado >= totalReq;
       nuevoEstado = completo ? "pagado" : "pendiente_pago";
+    }
+
+    // Al confirmar cualquier pago (desde pendiente_confirmacion),
+    // marcar todos los pagos no confirmados de este cliente como confirmados
+    const estadosQueConfirman = ["pagado", "pendiente_pago", "activo"];
+    if (estadosQueConfirman.includes(nuevoEstado) && cli.estado === "pendiente_confirmacion") {
+      await db.update(pagoCliente).set({
+        confirmado: true,
+        confirmadoEn: new Date(),
+        confirmadoPor: session.user.id,
+      }).where(eq(pagoCliente.clienteId, clienteId));
     }
 
     let comprobanteRuta: string | undefined;

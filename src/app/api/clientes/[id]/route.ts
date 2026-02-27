@@ -71,6 +71,20 @@ export async function PATCH(
     }
     updateData.estado = body.estado;
     updateData.adminId = session.user.id;
+
+    // Si el admin está aprobando (desde cualquier estado pendiente),
+    // marcar todos los pagos no confirmados como confirmados
+    const estadosAprobacion = ["pagado", "activo", "pendiente_pago"];
+    if (estadosAprobacion.includes(body.estado)) {
+      const cliActual = await db.query.cliente.findFirst({ where: eq(cliente.id, id) });
+      if (cliActual && cliActual.estado === "pendiente_confirmacion" || cliActual?.estado === "pendiente_admin") {
+        await db.update(pagoCliente).set({
+          confirmado: true,
+          confirmadoEn: new Date(),
+          confirmadoPor: session.user.id,
+        }).where(eq(pagoCliente.clienteId, id));
+      }
+    }
   }
 
   allowedFields.forEach((field) => {

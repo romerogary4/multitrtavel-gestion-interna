@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { cuadreDiario, cliente, pagoCliente } from "@/db/schema";
+import { cuadreDiario, cliente, pagoCliente, devolucion } from "@/db/schema";
 import { getServerSession } from "@/lib/auth-helpers";
 import type { AppSession } from "@/types";
 import { eq, and, gte, lte, sql, desc } from "drizzle-orm";
@@ -26,9 +26,19 @@ export async function GET(request: NextRequest) {
       ingresoTransferencia: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='transferencia'), 0)`,
       ingresoTarjeta: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.formaPago}='tarjeta'), 0)`,
       totalPagos: sql<number>`count(*)`,
-    }).from(pagoCliente).where(and(
-      gte(pagoCliente.creadoEn, diaInicio),
-      lte(pagoCliente.creadoEn, diaFin)
+    }).from(pagoCliente)
+      .where(and(
+        gte(pagoCliente.creadoEn, diaInicio),
+        lte(pagoCliente.creadoEn, diaFin),
+        eq(pagoCliente.confirmado, true)
+      ));
+
+    // Devoluciones procesadas ese día (se restan de ingresos)
+    const [totalesDevoluciones] = await db.select({
+      totalDevoluciones: sql<number>`coalesce(sum(${devolucion.monto}::numeric), 0)`,
+    }).from(devolucion).where(and(
+      gte(devolucion.creadoEn, diaInicio),
+      lte(devolucion.creadoEn, diaFin)
     ));
 
     const [{ totalClientes }] = await db.select({
@@ -63,6 +73,7 @@ export async function GET(request: NextRequest) {
         ingresoTransferencia: Number(totalesPagos.ingresoTransferencia),
         ingresoTarjeta: Number(totalesPagos.ingresoTarjeta),
         totalClientes: Number(totalClientes),
+        totalDevoluciones: Number(totalesDevoluciones.totalDevoluciones),
       },
       clientesDelDia,
       cuadreGuardado: cuadreGuardado || null,

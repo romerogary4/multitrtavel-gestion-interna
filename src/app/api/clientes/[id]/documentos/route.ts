@@ -86,6 +86,11 @@ export async function DELETE(
 
   if (!doc) return NextResponse.json({ error: "Documento no encontrado" }, { status: 404 });
 
+  // Solo el administrador puede eliminar documentos
+  if ((session.user as any).rol !== "administrador") {
+    return NextResponse.json({ error: "Solo los administradores pueden eliminar documentos" }, { status: 403 });
+  }
+
   await deleteFile(doc.rutaArchivo);
   await db.delete(documento).where(eq(documento.id, docId));
 

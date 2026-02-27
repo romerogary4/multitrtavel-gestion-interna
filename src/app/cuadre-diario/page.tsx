@@ -5,7 +5,7 @@ import { formatCurrency } from "@/lib/utils";
 import { toast } from "sonner";
 
 interface ClienteDia { id: string; nombre: string; apellidos: string; montoPagado?: string; formaPago?: string; moneda: string; paquete?: { nombre: string }; agente?: { name: string }; }
-interface Totales { ingresoEfectivo: number; ingresoTransferencia: number; ingresoTarjeta: number; totalClientes: number; }
+interface Totales { ingresoEfectivo: number; ingresoTransferencia: number; ingresoTarjeta: number; totalClientes: number; totalDevoluciones: number; }
 interface CuadrePendiente { id: string; fecha: string; cerrado: boolean; }
 type FormaPago = "efectivo" | "transferencia" | "tarjeta";
 interface GastoFijo { tipo: string; label: string; campo: string; placeholder: string; }
@@ -168,8 +168,10 @@ export default function CuadreDiarioPage() {
     setGuardando(false);
   }
 
-  const totalIngresos = totales
+  const totalBruto = totales
     ? Number(totales.ingresoEfectivo) + Number(totales.ingresoTransferencia) + Number(totales.ingresoTarjeta) : 0;
+  const totalDevoluciones = totales ? Number(totales.totalDevoluciones || 0) : 0;
+  const totalIngresos = totalBruto - totalDevoluciones;
   const totalGastos = gastos.reduce((s, g) => s + Number(g.monto || 0), 0);
   const saldoNeto = totalIngresos - totalGastos;
   const gastoFijoActual = GASTOS_FIJOS.find(g => g.tipo === tipoGasto)!;
@@ -305,11 +307,22 @@ export default function CuadreDiarioPage() {
                   </span>
                 </div>
               ))}
+              {totalDevoluciones > 0 && (
+                <div style={{
+                  marginTop: 10, padding: "8px 12px", background: "#fff1f2",
+                  borderRadius: 10, display: "flex", justifyContent: "space-between", alignItems: "center"
+                }}>
+                  <span style={{ fontSize: 13, color: "#cc1111" }}>↩ Devoluciones del día</span>
+                  <span style={{ fontWeight: 700, fontSize: 13, color: "#cc1111" }}>
+                    -{formatCurrency(totalDevoluciones)}
+                  </span>
+                </div>
+              )}
               <div style={{
                 marginTop: 14, paddingTop: 14, borderTop: "1px solid #e0e0e8",
                 display: "flex", justifyContent: "space-between"
               }}>
-                <span style={{ fontSize: 14, fontWeight: 700, color: "#0f0f0f" }}>Total</span>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#0f0f0f" }}>Total neto</span>
                 <span style={{ fontSize: 16, fontWeight: 800, color: "#16a34a" }}>{formatCurrency(totalIngresos)}</span>
               </div>
               {/* Detalle clientes */}

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { formatDate } from "@/lib/utils";
+import { useSession } from "@/lib/auth-client";
 
 interface Documento {
   id: string;
@@ -21,6 +22,8 @@ interface Props {
 }
 
 export function DocumentosList({ clienteId, documentosIniciales }: Props) {
+  const { data: session } = useSession();
+  const esAdmin = (session?.user as any)?.rol === "administrador";
   const [documentos, setDocumentos] = useState(documentosIniciales);
   const [uploading, setUploading] = useState(false);
   const [nombreDoc, setNombreDoc] = useState("");
@@ -111,12 +114,14 @@ export function DocumentosList({ clienteId, documentosIniciales }: Props) {
                 >
                   Ver
                 </a>
-                <button
-                  onClick={() => handleDelete(doc.id)}
-                  className="text-xs text-red-400 hover:text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
-                >
-                  ×
-                </button>
+                {esAdmin && (
+                  <button
+                    onClick={() => handleDelete(doc.id)}
+                    className="text-xs text-red-400 hover:text-red-600 px-2 py-1.5 rounded-lg hover:bg-red-50 transition-colors"
+                  >
+                    ×
+                  </button>
+                )}
               </div>
             </div>
           ))}
@@ -144,11 +149,10 @@ export function DocumentosList({ clienteId, documentosIniciales }: Props) {
             <option value="otro">Otro</option>
           </select>
           <label
-            className={`px-4 py-2 rounded-lg text-sm font-600 cursor-pointer transition-all ${
-              uploading
+            className={`px-4 py-2 rounded-lg text-sm font-600 cursor-pointer transition-all ${uploading
                 ? "bg-slate-200 text-slate-400 cursor-not-allowed"
                 : "bg-brand-600 text-white hover:bg-brand-700"
-            }`}
+              }`}
           >
             {uploading ? "Subiendo..." : "📎 Subir archivo"}
             <input
