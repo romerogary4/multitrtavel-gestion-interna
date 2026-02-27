@@ -7,6 +7,9 @@ export async function getServerSession(): Promise<AppSession | null> {
   const session = await auth.api.getSession({
     headers: await headers(),
   });
+  if (!session) return null;
+  // Bloquear usuarios inactivos en todas las APIs
+  if (!(session.user as any).activo) return null;
   return session as unknown as AppSession | null;
 }
 
