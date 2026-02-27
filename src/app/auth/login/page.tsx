@@ -26,10 +26,10 @@ export default function LoginPage() {
   }
 
   return (
-    <div style={{ minHeight: "100vh", display: "flex", background: "#f4f4f6" }}>
+    <div style={{ minHeight: "100vh", display: "flex", background: "#f4f4f6" }} className="login-container">
 
       {/* ── Left panel ── */}
-      <div style={{
+      <div className="login-left" style={{
         width: "50%", background: "white", display: "flex",
         flexDirection: "column", justifyContent: "center", alignItems: "center",
         padding: "60px", borderRight: "1px solid #ebebeb", position: "relative",
@@ -183,7 +183,7 @@ export default function LoginPage() {
       </div>
 
       {/* ── Right panel ── */}
-      <div style={{
+      <div className="login-right" style={{
         width: "50%", display: "flex", alignItems: "center",
         justifyContent: "center", padding: "60px", position: "relative", overflow: "hidden"
       }}>

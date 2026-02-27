@@ -682,3 +682,21 @@ body {
     flex-direction: column !important;
   }
 }
+
+/* ── Login responsive ── */
+@media (max-width: 768px) {
+  .login-container {
+    flex-direction: column;
+  }
+
+  .login-left {
+    display: none !important;
+  }
+
+  .login-right {
+    width: 100% !important;
+    min-height: 100vh;
+    padding: 40px 24px !important;
+    justify-content: center;
+  }
+}
