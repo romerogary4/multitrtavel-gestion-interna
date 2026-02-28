@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { user, cliente, paquete, documento, servicioEspecial, cuadreDiario, pagoCliente, devolucion, notificacion, tarea } from "./schema";
+import { user, cliente, paquete, documento, servicioEspecial, cuadreDiario, pagoCliente, devolucion, notificacion, tarea, docSolicitud, docSolicitudHistorial } from "./schema";
 
 export const userRelations = relations(user, ({ many }) => ({
   clientesComoAgente: many(cliente, { relationName: "agente" }),
@@ -57,4 +57,13 @@ export const notificacionRelations = relations(notificacion, ({ one }) => ({
 export const tareaRelations = relations(tarea, ({ one }) => ({
   creadoPor: one(user, { fields: [tarea.creadoPor], references: [user.id], relationName: "tareasCreadoras" }),
   asignadoA: one(user, { fields: [tarea.asignadoA], references: [user.id], relationName: "tareasAsignadas" }),
+}));
+export const docSolicitudRelations = relations(docSolicitud, ({ one, many }) => ({
+  creadoPorUser: one(user, { fields: [docSolicitud.creadoPor], references: [user.id] }),
+  historial: many(docSolicitudHistorial),
+}));
+
+export const docSolicitudHistorialRelations = relations(docSolicitudHistorial, ({ one }) => ({
+  solicitud: one(docSolicitud, { fields: [docSolicitudHistorial.solicitudId], references: [docSolicitud.id] }),
+  creadoPorUser: one(user, { fields: [docSolicitudHistorial.creadoPor], references: [user.id] }),
 }));

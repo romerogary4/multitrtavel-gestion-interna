@@ -15,6 +15,7 @@ const navItems = [
   { href: "/clientes/nuevo", label: "Nuevo cliente", emoji: "➕", adminOnly: false, agenteVisible: true },
 
   { href: "/servicios-especiales", label: "Servicios especiales", emoji: "⭐", adminOnly: false, agenteVisible: true },
+  { href: "/documentacion", label: "Documentación", emoji: "📄", adminOnly: false, agenteVisible: true },
   { href: "/reportes", label: "Reportes", emoji: "📊", adminOnly: true, agenteVisible: false },
   { href: "/cuadre-diario", label: "Cuadre diario", emoji: "📋", adminOnly: true, agenteVisible: false },
   { href: "/paquetes", label: "Paquetes", emoji: "✈️", adminOnly: true, agenteVisible: false },
@@ -45,7 +46,7 @@ export function Sidebar() {
 
   const filtered = navItems.filter(i => esAdmin ? !i.adminOnly || true : i.agenteVisible);
   const mainNav = filtered.filter(i => ["/dashboard", "/clientes", "/clientes/nuevo"].includes(i.href));
-  const gestionNav = filtered.filter(i => ["/servicios-especiales", "/reportes"].includes(i.href));
+  const gestionNav = filtered.filter(i => ["/servicios-especiales", "/documentacion", "/reportes"].includes(i.href));
   const adminNav = filtered.filter(i => ["/cuadre-diario", "/paquetes", "/admin/agentes", "/admin/servicios"].includes(i.href));
 
   return (

@@ -329,3 +329,36 @@ export const tarea = pgTable("tarea", {
 ]);
 
 export type Tarea = typeof tarea.$inferSelect;
+// ─── Documentación ────────────────────────────────────────────────────────────
+
+export const estadoDocSolicitudEnum = pgEnum("estado_doc_solicitud", [
+  "solicitado", "enviado", "entregado", "pagado",
+]);
+
+export const docSolicitud = pgTable("doc_solicitud", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  titulo: text("titulo").notNull(),
+  descripcion: text("descripcion"),
+  estado: estadoDocSolicitudEnum("estado").notNull().default("solicitado"),
+  creadoPor: text("creado_por").notNull().references(() => user.id),
+  actualizadoEn: timestamp("actualizado_en").notNull().defaultNow(),
+  creadoEn: timestamp("creado_en").notNull().defaultNow(),
+}, (t) => [
+  { name: "doc_solicitud_creado_idx", columns: [t.creadoPor] },
+]);
+
+export const docSolicitudHistorial = pgTable("doc_solicitud_historial", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  solicitudId: uuid("solicitud_id").notNull().references(() => docSolicitud.id, { onDelete: "cascade" }),
+  estadoAnterior: text("estado_anterior"),
+  estadoNuevo: text("estado_nuevo").notNull(),
+  nota: text("nota"),
+  comprobante: text("comprobante"),
+  creadoPor: text("creado_por").notNull().references(() => user.id),
+  creadoEn: timestamp("creado_en").notNull().defaultNow(),
+}, (t) => [
+  { name: "doc_historial_solicitud_idx", columns: [t.solicitudId] },
+]);
+
+export type DocSolicitud = typeof docSolicitud.$inferSelect;
+export type DocSolicitudHistorial = typeof docSolicitudHistorial.$inferSelect;

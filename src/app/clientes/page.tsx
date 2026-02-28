@@ -8,12 +8,17 @@ import { formatCurrency } from "@/lib/utils";
 interface Cliente {
   id: string; nombre: string; apellidos: string; email?: string; telefono: string;
   estado: string; formaPago?: string; montoPagado?: string; moneda: string;
-  destino?: string; creadoEn: string;
+  destino?: string; creadoEn: string; fechaSalida?: string; fechaRegreso?: string;
   paquete?: { nombre: string }; agente?: { name: string };
 }
 
 const ESTADOS = ["todos", "pagado", "pendiente_pago", "pendiente_confirmacion", "pendiente_admin", "activo", "cancelado", "devuelto"];
 const PAGOS = ["todos", "efectivo", "transferencia", "tarjeta"];
+
+function formatFecha(fecha?: string) {
+  if (!fecha) return null;
+  return new Date(fecha).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
+}
 
 export default function ClientesPage() {
   const { data: session } = useSession();
@@ -23,11 +28,14 @@ export default function ClientesPage() {
   const [busqueda, setBusqueda] = useState("");
   const [estado, setEstado] = useState("todos");
   const [pago, setPago] = useState("todos");
+  const [salidaDesde, setSalidaDesde] = useState("");
+  const [salidaHasta, setSalidaHasta] = useState("");
   const [pagina, setPagina] = useState(1);
   const [total, setTotal] = useState(0);
+  const [mostrarFiltrosFecha, setMostrarFiltrosFecha] = useState(false);
   const POR_PAG = 15;
 
-  useEffect(() => { cargar(); }, [busqueda, estado, pago, pagina]);
+  useEffect(() => { cargar(); }, [busqueda, estado, pago, salidaDesde, salidaHasta, pagina]);
 
   async function cargar() {
     setLoading(true);
@@ -35,22 +43,30 @@ export default function ClientesPage() {
     if (busqueda) p.set("busqueda", busqueda);
     if (estado !== "todos") p.set("estado", estado);
     if (pago !== "todos") p.set("formaPago", pago);
+    if (salidaDesde) p.set("salidaDesde", salidaDesde);
+    if (salidaHasta) p.set("salidaHasta", salidaHasta);
     const r = await fetch(`/api/clientes?${p}`);
     const d = await r.json();
     setClientes(d.clientes || []); setTotal(d.total || 0); setLoading(false);
   }
 
+  function limpiarFechas() {
+    setSalidaDesde(""); setSalidaHasta(""); setPagina(1);
+  }
+
+  const hayFiltroFecha = salidaDesde || salidaHasta;
   const totalPags = Math.ceil(total / POR_PAG);
 
   const estadoLabel: Record<string, string> = {
-    pagado: "Pagado",
-    pendiente_pago: "Pend. pago",
-    pendiente_confirmacion: "Pend. confirmación",
-    pendiente_admin: "Pend. admin",
-    activo: "Activo",
-    cancelado: "Cancelado",
-    devuelto: "Devuelto",
-    pendiente: "Pendiente",
+    pagado: "Pagado", pendiente_pago: "Pend. pago",
+    pendiente_confirmacion: "Pend. confirmación", pendiente_admin: "Pend. admin",
+    activo: "Activo", cancelado: "Cancelado", devuelto: "Devuelto", pendiente: "Pendiente",
+  };
+
+  const inputStyle = {
+    padding: "9px 14px", borderRadius: 12, border: "1.5px solid #e0e0e8",
+    fontSize: 13, fontFamily: "inherit", outline: "none", background: "white",
+    color: "#374151", cursor: "pointer",
   };
 
   return (
@@ -65,36 +81,67 @@ export default function ClientesPage() {
       </div>
 
       {/* Filtros */}
-      <div className="card" style={{
-        padding: "16px 20px", marginBottom: 20,
-        display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap"
-      }}>
-        <input placeholder="🔍  Buscar por nombre, email, documento..."
-          value={busqueda} onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
-          style={{
-            flex: 1, minWidth: 200, padding: "9px 14px", borderRadius: 12,
-            border: "1.5px solid #e0e0e8", fontSize: 13, fontFamily: "inherit",
-            outline: "none", background: "white"
-          }}
-          onFocus={e => (e.target as HTMLElement).style.borderColor = "#cc1111"}
-          onBlur={e => (e.target as HTMLElement).style.borderColor = "#e0e0e8"} />
-        <select value={estado} onChange={e => { setEstado(e.target.value); setPagina(1); }}
-          style={{
-            padding: "9px 14px", borderRadius: 12, border: "1.5px solid #e0e0e8",
-            fontSize: 13, fontFamily: "inherit", outline: "none", background: "white", color: "#374151", cursor: "pointer"
+      <div className="card" style={{ padding: "16px 20px", marginBottom: 20 }}>
+        {/* Fila principal */}
+        <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
+          <input placeholder="🔍  Buscar por nombre, email, documento..."
+            value={busqueda} onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
+            style={{ flex: 1, minWidth: 200, ...inputStyle, cursor: "text" }}
+            onFocus={e => (e.target as HTMLElement).style.borderColor = "#cc1111"}
+            onBlur={e => (e.target as HTMLElement).style.borderColor = "#e0e0e8"} />
+          <select value={estado} onChange={e => { setEstado(e.target.value); setPagina(1); }}
+            style={inputStyle}>
+            {ESTADOS.map(e => <option key={e} value={e}>{e === "todos" ? "Todos los estados" : estadoLabel[e] || e}</option>)}
+          </select>
+          <select value={pago} onChange={e => { setPago(e.target.value); setPagina(1); }}
+            style={inputStyle}>
+            {PAGOS.map(p => <option key={p} value={p}>{p === "todos" ? "Todas las formas" : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+          </select>
+          {/* Botón filtro fechas vuelo */}
+          <button onClick={() => setMostrarFiltrosFecha(v => !v)}
+            style={{
+              ...inputStyle, cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
+              borderColor: hayFiltroFecha ? "#cc1111" : "#e0e0e8",
+              color: hayFiltroFecha ? "#cc1111" : "#374151",
+              fontWeight: hayFiltroFecha ? 700 : 500,
+              background: hayFiltroFecha ? "#fff5f5" : "white",
+            }}>
+            ✈️ Vuelos {hayFiltroFecha ? "●" : ""}
+          </button>
+          <span style={{ fontSize: 13, color: "#9ca3af", whiteSpace: "nowrap" }}>
+            {total} resultado{total !== 1 ? "s" : ""}
+          </span>
+        </div>
+
+        {/* Filtro fechas de vuelo — desplegable */}
+        {mostrarFiltrosFecha && (
+          <div style={{
+            marginTop: 12, paddingTop: 12, borderTop: "1px solid #f0f0f0",
+            display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap"
           }}>
-          {ESTADOS.map(e => <option key={e} value={e}>{e === "todos" ? "Todos los estados" : estadoLabel[e] || e}</option>)}
-        </select>
-        <select value={pago} onChange={e => { setPago(e.target.value); setPagina(1); }}
-          style={{
-            padding: "9px 14px", borderRadius: 12, border: "1.5px solid #e0e0e8",
-            fontSize: 13, fontFamily: "inherit", outline: "none", background: "white", color: "#374151", cursor: "pointer"
-          }}>
-          {PAGOS.map(p => <option key={p} value={p}>{p === "todos" ? "Todas las formas" : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
-        </select>
-        <span style={{ fontSize: 13, color: "#9ca3af", whiteSpace: "nowrap" }}>
-          {total} resultado{total !== 1 ? "s" : ""}
-        </span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>
+              Fecha de salida
+            </span>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <label style={{ fontSize: 12, color: "#6b7280" }}>Desde</label>
+              <input type="date" value={salidaDesde}
+                onChange={e => { setSalidaDesde(e.target.value); setPagina(1); }}
+                style={{ ...inputStyle, cursor: "pointer" }} />
+            </div>
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <label style={{ fontSize: 12, color: "#6b7280" }}>Hasta</label>
+              <input type="date" value={salidaHasta}
+                onChange={e => { setSalidaHasta(e.target.value); setPagina(1); }}
+                style={{ ...inputStyle, cursor: "pointer" }} />
+            </div>
+            {hayFiltroFecha && (
+              <button onClick={limpiarFechas}
+                style={{ fontSize: 12, color: "#cc1111", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit" }}>
+                ✕ Limpiar fechas
+              </button>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Tabla */}
@@ -114,6 +161,7 @@ export default function ClientesPage() {
                   <th>Cliente</th>
                   <th>Contacto</th>
                   <th>Paquete</th>
+                  <th>✈️ Vuelo</th>
                   {esAdmin && <th>Agente</th>}
                   <th>Pago</th>
                   <th style={{ textAlign: "right" }}>Monto</th>
@@ -147,6 +195,22 @@ export default function ClientesPage() {
                       {c.email && <p style={{ fontSize: 12, color: "#9ca3af" }}>{c.email}</p>}
                     </td>
                     <td style={{ fontSize: 13, color: "#374151" }}>{c.paquete?.nombre || "—"}</td>
+                    <td>
+                      {c.fechaSalida ? (
+                        <div>
+                          <p style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>
+                            {formatFecha(c.fechaSalida)}
+                          </p>
+                          {c.fechaRegreso && (
+                            <p style={{ fontSize: 11, color: "#9ca3af" }}>
+                              Regreso: {formatFecha(c.fechaRegreso)}
+                            </p>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ fontSize: 13, color: "#d1d5db" }}>—</span>
+                      )}
+                    </td>
                     {esAdmin && <td style={{ fontSize: 13, color: "#374151" }}>{c.agente?.name || "—"}</td>}
                     <td style={{ fontSize: 13, color: "#374151", textTransform: "capitalize" }}>
                       {c.formaPago || "—"}
@@ -164,8 +228,8 @@ export default function ClientesPage() {
               </tbody>
             </table>
           )}
-
         </div>
+
         {/* Paginación */}
         {totalPags > 1 && (
           <div style={{

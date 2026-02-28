@@ -18,6 +18,8 @@ export async function GET(request: NextRequest) {
   const paqueteId = searchParams.get("paquete");
   const desde = searchParams.get("desde");
   const hasta = searchParams.get("hasta");
+  const salidaDesde = searchParams.get("salidaDesde");
+  const salidaHasta = searchParams.get("salidaHasta");
   const pagina = parseInt(searchParams.get("pagina") || "1");
   const limite = Math.min(parseInt(searchParams.get("limite") || "20"), 100); // máx 100 por página
   const esAgente = session.user.rol === "agente";
@@ -29,6 +31,8 @@ export async function GET(request: NextRequest) {
   if (paqueteId) conditions.push(eq(cliente.paqueteId, paqueteId));
   if (desde) conditions.push(gte(cliente.creadoEn, new Date(desde)));
   if (hasta) conditions.push(lte(cliente.creadoEn, new Date(hasta)));
+  if (salidaDesde) conditions.push(gte(cliente.fechaSalida, new Date(salidaDesde)));
+  if (salidaHasta) { const h = new Date(salidaHasta); h.setHours(23, 59, 59, 999); conditions.push(lte(cliente.fechaSalida, h)); }
   if (busqueda) {
     conditions.push(sql`(${cliente.nombre} ILIKE ${"%" + busqueda + "%"} OR ${cliente.apellidos} ILIKE ${"%" + busqueda + "%"} OR ${cliente.email} ILIKE ${"%" + busqueda + "%"} OR ${cliente.telefono} ILIKE ${"%" + busqueda + "%"})`);
   }
