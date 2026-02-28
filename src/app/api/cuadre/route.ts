@@ -84,23 +84,25 @@ export async function GET(request: NextRequest) {
   if (tipo === "pendientes") {
     const hoy = new Date();
     hoy.setHours(0, 0, 0, 0);
-    const hace30 = new Date(hoy);
-    hace30.setDate(hoy.getDate() - 30);
+
+    // Fecha de inicio del sistema — no mostrar días anteriores a esta fecha
+    const inicioSistema = new Date("2026-03-01");
+    inicioSistema.setHours(0, 0, 0, 0);
 
     // 1. Cuadres abiertos (borradores sin cerrar)
     const abiertos = await db.query.cuadreDiario.findMany({
       where: and(
         eq(cuadreDiario.cerrado, false),
-        gte(cuadreDiario.fecha, hace30),
+        gte(cuadreDiario.fecha, inicioSistema),
         lte(cuadreDiario.fecha, hoy)
       ),
       orderBy: (t: any, { desc }: any) => [desc(t.fecha)],
     });
 
-    // 2. Todos los cuadres en los últimos 30 días (para detectar huecos)
+    // 2. Todos los cuadres desde inicio del sistema (para detectar huecos)
     const todosCuadres = await db.query.cuadreDiario.findMany({
       where: and(
-        gte(cuadreDiario.fecha, hace30),
+        gte(cuadreDiario.fecha, inicioSistema),
         lte(cuadreDiario.fecha, hoy)
       ),
     });
@@ -109,12 +111,12 @@ export async function GET(request: NextRequest) {
       todosCuadres.map((c: any) => new Date(c.fecha).toISOString().split("T")[0])
     );
 
-    // 3. Detectar días SIN cuadre entre hace30 y ayer
+    // 3. Detectar días SIN cuadre desde inicio del sistema hasta ayer
     const ayer = new Date(hoy);
     ayer.setDate(hoy.getDate() - 1);
 
     const diasSinCuadre: { id: string; fecha: string; cerrado: boolean }[] = [];
-    const cursor = new Date(hace30);
+    const cursor = new Date(inicioSistema);
     while (cursor <= ayer) {
       const dStr = cursor.toISOString().split("T")[0];
       if (!fechasConCuadre.has(dStr)) {
