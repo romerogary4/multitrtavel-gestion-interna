@@ -297,7 +297,7 @@ function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh }: 
                         }}>
                             {expandido ? "▲ Ocultar" : "▼ Historial"}
                         </button>
-                        {(esAdmin || esSenior || sol.creadoPor === sessionUserId) && (
+                        {(esAdmin || esSenior) && (
                             <button onClick={() => setModalEstado(true)} style={{
                                 padding: "6px 12px", borderRadius: 8, border: "none",
                                 background: "#cc1111", color: "white", fontSize: 12, fontWeight: 700,
@@ -389,10 +389,11 @@ export default function DocumentacionPage() {
     const { data: session } = useSession();
     const esAdmin = (session?.user as any)?.rol === "administrador";
     const esSenior = (session?.user as any)?.rol === "agente_senior";
-    const sessionUserId = session?.user?.id || "";
+    const sessionUserId = (session?.user as any)?.id ?? "";
     const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
     const [loading, setLoading] = useState(true);
     const [filtro, setFiltro] = useState("todos");
+    const [busqueda, setBusqueda] = useState("");
     const [modalNueva, setModalNueva] = useState(false);
 
     async function cargar() {
@@ -403,6 +404,14 @@ export default function DocumentacionPage() {
     }
 
     useEffect(() => { cargar(); }, [filtro]);
+
+    const solicitudesFiltradas = solicitudes.filter(sol => {
+        if (!busqueda.trim()) return true;
+        const q = busqueda.toLowerCase();
+        return sol.titulo.toLowerCase().includes(q) ||
+            (sol.descripcion || "").toLowerCase().includes(q) ||
+            sol.creadoPorUser.name.toLowerCase().includes(q);
+    });
 
     const filtros = [
         { value: "todos", label: "Todos" },
@@ -430,6 +439,22 @@ export default function DocumentacionPage() {
                 </button>
             </div>
 
+            {/* Buscador */}
+            <div style={{ marginBottom: 14 }}>
+                <input
+                    value={busqueda}
+                    onChange={e => setBusqueda(e.target.value)}
+                    placeholder="🔍 Buscar por título, descripción o agente..."
+                    style={{
+                        width: "100%", padding: "10px 16px", borderRadius: 12,
+                        border: "1.5px solid #e0e0e8", fontSize: 13, fontFamily: "inherit",
+                        outline: "none", boxSizing: "border-box",
+                    }}
+                    onFocus={e => (e.target as HTMLElement).style.borderColor = "#cc1111"}
+                    onBlur={e => (e.target as HTMLElement).style.borderColor = "#e0e0e8"}
+                />
+            </div>
+
             {/* Filtros de estado */}
             <div style={{ display: "flex", gap: 8, marginBottom: 20, flexWrap: "wrap" }}>
                 {filtros.map(f => (
@@ -447,7 +472,7 @@ export default function DocumentacionPage() {
                     </button>
                 ))}
                 <span style={{ fontSize: 13, color: "#9ca3af", alignSelf: "center", marginLeft: 4 }}>
-                    {solicitudes.length} solicitud{solicitudes.length !== 1 ? "es" : ""}
+                    {solicitudesFiltradas.length} solicitud{solicitudesFiltradas.length !== 1 ? "es" : ""}
                 </span>
             </div>
 
@@ -465,7 +490,7 @@ export default function DocumentacionPage() {
                 </div>
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-                    {solicitudes.map(sol => (
+                    {solicitudesFiltradas.map(sol => (
                         <TarjetaSolicitud key={sol.id} sol={sol} esAdmin={esAdmin} esSenior={esSenior} sessionUserId={sessionUserId} onRefresh={cargar} />
                     ))}
                 </div>

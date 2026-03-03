@@ -76,8 +76,8 @@ export async function PATCH(request: NextRequest) {
 
     const esAdmin = session.user.rol === "administrador";
     const esSenior = session.user.rol === "agente_senior";
-    if (!esAdmin && !esSenior && solicitud.creadoPor !== session.user.id) {
-        return NextResponse.json({ error: "Solo puedes cambiar el estado de tus propias solicitudes" }, { status: 403 });
+    if (!esAdmin && !esSenior) {
+        return NextResponse.json({ error: "Solo agentes senior y administradores pueden cambiar el estado" }, { status: 403 });
     }
 
     let comprobanteRuta: string | undefined;
