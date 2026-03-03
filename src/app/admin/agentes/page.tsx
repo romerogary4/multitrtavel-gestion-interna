@@ -79,6 +79,7 @@ export default function AgentesPage() {
               <select value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))}
                 className="input-field" style={{ cursor: "pointer" }}>
                 <option value="agente">Agente</option>
+                <option value="agente_senior">Agente Senior</option>
                 <option value="administrador">Administrador</option>
               </select>
             </div>
@@ -115,11 +116,11 @@ export default function AgentesPage() {
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
                     <span style={{
                       fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99,
-                      background: a.rol === "administrador" ? "#fef3c7" : "#f0f0ff",
-                      color: a.rol === "administrador" ? "#92400e" : "#4338ca",
-                      border: `1px solid ${a.rol === "administrador" ? "#fde68a" : "#c7d2fe"}`
+                      background: a.rol === "administrador" ? "#fef3c7" : a.rol === "agente_senior" ? "#dcfce7" : "#f0f0ff",
+                      color: a.rol === "administrador" ? "#92400e" : a.rol === "agente_senior" ? "#166534" : "#4338ca",
+                      border: `1px solid ${a.rol === "administrador" ? "#fde68a" : a.rol === "agente_senior" ? "#86efac" : "#c7d2fe"}`
                     }}>
-                      {a.rol === "administrador" ? "Admin" : "Agente"}
+                      {a.rol === "administrador" ? "Admin" : a.rol === "agente_senior" ? "Senior" : "Agente"}
                     </span>
                     <span style={{
                       fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99,

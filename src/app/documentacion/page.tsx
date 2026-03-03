@@ -222,8 +222,8 @@ function ModalNuevaSolicitud({ onClose, onSuccess }: { onClose: () => void; onSu
 }
 
 // ─── Tarjeta Solicitud ────────────────────────────────────────────────────────
-function TarjetaSolicitud({ sol, esAdmin, sessionUserId, onRefresh }: {
-    sol: Solicitud; esAdmin: boolean; sessionUserId: string; onRefresh: () => void;
+function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh }: {
+    sol: Solicitud; esAdmin: boolean; esSenior: boolean; sessionUserId: string; onRefresh: () => void;
 }) {
     const [expandido, setExpandido] = useState(false);
     const [modalEstado, setModalEstado] = useState(false);
@@ -297,7 +297,7 @@ function TarjetaSolicitud({ sol, esAdmin, sessionUserId, onRefresh }: {
                         }}>
                             {expandido ? "▲ Ocultar" : "▼ Historial"}
                         </button>
-                        {(esAdmin || sol.creadoPor === sessionUserId) && (
+                        {(esAdmin || esSenior || sol.creadoPor === sessionUserId) && (
                             <button onClick={() => setModalEstado(true)} style={{
                                 padding: "6px 12px", borderRadius: 8, border: "none",
                                 background: "#cc1111", color: "white", fontSize: 12, fontWeight: 700,
@@ -388,6 +388,7 @@ function TarjetaSolicitud({ sol, esAdmin, sessionUserId, onRefresh }: {
 export default function DocumentacionPage() {
     const { data: session } = useSession();
     const esAdmin = (session?.user as any)?.rol === "administrador";
+    const esSenior = (session?.user as any)?.rol === "agente_senior";
     const sessionUserId = session?.user?.id || "";
     const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
     const [loading, setLoading] = useState(true);
@@ -465,7 +466,7 @@ export default function DocumentacionPage() {
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {solicitudes.map(sol => (
-                        <TarjetaSolicitud key={sol.id} sol={sol} esAdmin={esAdmin} sessionUserId={sessionUserId} onRefresh={cargar} />
+                        <TarjetaSolicitud key={sol.id} sol={sol} esAdmin={esAdmin} esSenior={esSenior} sessionUserId={sessionUserId} onRefresh={cargar} />
                     ))}
                 </div>
             )}

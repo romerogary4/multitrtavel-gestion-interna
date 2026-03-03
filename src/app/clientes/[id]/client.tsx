@@ -725,7 +725,7 @@ function DocumentosSection({ clienteId, documentos: inicial, pagos, onLightbox, 
               const isPdf = p.comprobante!.endsWith(".pdf");
               return (
                 <div key={p.id} style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                  <div onClick={() => onLightbox(url)}
+                  <div onClick={() => isPdf ? window.open(url, "_blank") : onLightbox(url)}
                     style={{
                       width: 90, height: 90, borderRadius: 14, overflow: "hidden",
                       border: "2px solid #f0f0f0", cursor: "pointer", transition: "all 0.2s",
@@ -768,7 +768,7 @@ function DocumentosSection({ clienteId, documentos: inicial, pagos, onLightbox, 
                   padding: "10px 14px", background: "#f9f9f9", borderRadius: 12,
                   border: "1px solid #f0f0f0"
                 }}>
-                  <div onClick={() => onLightbox(url)}
+                  <div onClick={() => isImg ? onLightbox(url) : window.open(url, "_blank")}
                     style={{
                       width: 48, height: 48, borderRadius: 10, overflow: "hidden",
                       flexShrink: 0, cursor: "pointer", background: isImg ? "#000" : "#f0f0f0",

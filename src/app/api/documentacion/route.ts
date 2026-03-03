@@ -75,7 +75,8 @@ export async function PATCH(request: NextRequest) {
     if (!solicitud) return NextResponse.json({ error: "Solicitud no encontrada" }, { status: 404 });
 
     const esAdmin = session.user.rol === "administrador";
-    if (!esAdmin && solicitud.creadoPor !== session.user.id) {
+    const esSenior = session.user.rol === "agente_senior";
+    if (!esAdmin && !esSenior && solicitud.creadoPor !== session.user.id) {
         return NextResponse.json({ error: "Solo puedes cambiar el estado de tus propias solicitudes" }, { status: 403 });
     }
 

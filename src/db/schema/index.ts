@@ -5,7 +5,7 @@ import {
 
 // ─── Enums ───────────────────────────────────────────────────────────────────
 
-export const rolEnum = pgEnum("rol", ["agente", "administrador"]);
+export const rolEnum = pgEnum("rol", ["agente", "agente_senior", "administrador"]);
 
 export const formaPagoEnum = pgEnum("forma_pago", [
   "transferencia", "tarjeta", "efectivo",
