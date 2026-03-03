@@ -85,12 +85,7 @@ export default function ServiciosPage() {
       {/* Header */}
       <div className="page-header">
         <h1 className="page-title">Servicios especiales</h1>
-        {!esAdmin && (
-          <Link href="/servicios-especiales/nueva" className="btn-primary"
-            style={{ textDecoration: "none", display: "inline-flex", alignItems: "center", gap: 6 }}>
-            + Nueva solicitud
-          </Link>
-        )}
+
       </div>
 
       {/* Filtros de estado */}
