@@ -459,7 +459,11 @@ export function ClienteDetailClient({ clienteData: initial, esAdmin, sessionUser
                     </p>
                   </div>
                   {h.comprobante && (
-                    <button onClick={() => setLightbox(getFileUrl(h.comprobante))}
+                    <button onClick={() => {
+                      const url = getFileUrl(h.comprobante);
+                      if (h.comprobante.endsWith(".pdf")) window.open(url, "_blank");
+                      else setLightbox(url);
+                    }}
                       style={{
                         fontSize: 12, color: "#7c3aed", background: "#f5f3ff",
                         border: "1px solid #c4b5fd", borderRadius: 8, padding: "4px 10px",

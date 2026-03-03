@@ -29,6 +29,13 @@ export default function AgentesPage() {
     setCreando(false);
   }
 
+  async function cambiarRol(a: Agente, nuevoRol: string) {
+    if (nuevoRol === a.rol) return;
+    await fetch(`/api/admin/agentes?id=${a.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rol: nuevoRol }) });
+    toast.success(`Rol cambiado a ${nuevoRol === "administrador" ? "Admin" : nuevoRol === "agente_senior" ? "Senior" : "Agente"}`);
+    cargar();
+  }
+
   async function toggleActivo(a: Agente) {
     const accion = a.activo ? "desactivar" : "activar";
     if (!confirm(`¿${accion.charAt(0).toUpperCase() + accion.slice(1)} a ${a.name}?`)) return;
@@ -114,14 +121,18 @@ export default function AgentesPage() {
                     <p style={{ fontSize: 12, color: "#9ca3af", marginTop: 2 }}>{a.email}</p>
                   </div>
                   <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                    <span style={{
-                      fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99,
-                      background: a.rol === "administrador" ? "#fef3c7" : a.rol === "agente_senior" ? "#dcfce7" : "#f0f0ff",
-                      color: a.rol === "administrador" ? "#92400e" : a.rol === "agente_senior" ? "#166534" : "#4338ca",
-                      border: `1px solid ${a.rol === "administrador" ? "#fde68a" : a.rol === "agente_senior" ? "#86efac" : "#c7d2fe"}`
-                    }}>
-                      {a.rol === "administrador" ? "Admin" : a.rol === "agente_senior" ? "Senior" : "Agente"}
-                    </span>
+                    <select value={a.rol} onChange={e => cambiarRol(a, e.target.value)}
+                      style={{
+                        fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 99,
+                        background: a.rol === "administrador" ? "#fef3c7" : a.rol === "agente_senior" ? "#dcfce7" : "#f0f0ff",
+                        color: a.rol === "administrador" ? "#92400e" : a.rol === "agente_senior" ? "#166534" : "#4338ca",
+                        border: `1px solid ${a.rol === "administrador" ? "#fde68a" : a.rol === "agente_senior" ? "#86efac" : "#c7d2fe"}`,
+                        cursor: "pointer", fontFamily: "inherit", outline: "none",
+                      }}>
+                      <option value="agente">Agente</option>
+                      <option value="agente_senior">Senior</option>
+                      <option value="administrador">Admin</option>
+                    </select>
                     <span style={{
                       fontSize: 12, fontWeight: 600, padding: "3px 10px", borderRadius: 99,
                       background: a.activo ? "#dcfce7" : "#f3f4f6",
