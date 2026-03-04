@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { user } from "@/db/schema";
+import { user, account } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getServerSession } from "@/lib/auth-helpers";
 import type { AppSession } from "@/types";
@@ -82,7 +82,20 @@ export async function PATCH(request: NextRequest) {
   if (!id) return NextResponse.json({ error: "id requerido" }, { status: 400 });
 
   const body = await request.json();
-  const { name, rol, activo } = body;
+  const { name, rol, activo, password } = body;
+
+  // Cambio de contraseña
+  if (password) {
+    if (password.length < 6) {
+      return NextResponse.json({ error: "La contraseña debe tener al menos 6 caracteres" }, { status: 400 });
+    }
+    const ctx = await auth.$context;
+    const hashed = await ctx.password.hash(password);
+    await db.update(account)
+      .set({ password: hashed })
+      .where(eq(account.userId, id));
+    return NextResponse.json({ ok: true });
+  }
 
   const updateData: any = {};
   if (name) updateData.name = name;

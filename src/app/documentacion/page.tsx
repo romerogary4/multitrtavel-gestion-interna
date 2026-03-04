@@ -35,6 +35,50 @@ const ESTADO_STYLE: Record<string, { bg: string; color: string; label: string }>
     pagado: { bg: "#f3e8ff", color: "#6b21a8", label: "Pagado" },
 };
 
+// ─── Detección de duplicados ─────────────────────────────────────────────────
+function normalizarTitulo(titulo: string): string {
+    return titulo.toLowerCase()
+        .normalize("NFD").replace(/[̀-ͯ]/g, "")  // quitar tildes
+        .replace(/[^a-z0-9\s]/g, "")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function tieneDescarte(sol: Solicitud): boolean {
+    return sol.historial.some(h => h.nota?.startsWith("[No es duplicado]"));
+}
+
+function detectarDuplicados(solicitudes: Solicitud[]): Map<string, string[]> {
+    // Retorna Map<solicitud.id, [ids de duplicados]>
+    const grupos = new Map<string, string[]>();
+    const activos = solicitudes.filter(s => s.estado !== "pagado" && !tieneDescarte(s));
+
+    for (let i = 0; i < activos.length; i++) {
+        for (let j = i + 1; j < activos.length; j++) {
+            const a = activos[i];
+            const b = activos[j];
+            const tA = normalizarTitulo(a.titulo);
+            const tB = normalizarTitulo(b.titulo);
+
+            // Similar si comparten 60%+ de palabras clave (min 3 chars)
+            const palabrasA = tA.split(" ").filter(p => p.length >= 3);
+            const palabrasB = tB.split(" ").filter(p => p.length >= 3);
+            if (palabrasA.length === 0 || palabrasB.length === 0) continue;
+
+            const comunes = palabrasA.filter(p => palabrasB.includes(p));
+            const similitud = comunes.length / Math.max(palabrasA.length, palabrasB.length);
+
+            if (similitud >= 0.6) {
+                if (!grupos.has(a.id)) grupos.set(a.id, []);
+                if (!grupos.has(b.id)) grupos.set(b.id, []);
+                grupos.get(a.id)!.push(b.id);
+                grupos.get(b.id)!.push(a.id);
+            }
+        }
+    }
+    return grupos;
+}
+
 function formatFecha(f: string) {
     return new Date(f).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" });
 }
@@ -221,12 +265,83 @@ function ModalNuevaSolicitud({ onClose, onSuccess }: { onClose: () => void; onSu
     );
 }
 
+// ─── Modal Descartar Duplicado ───────────────────────────────────────────────
+function ModalDescartarDuplicado({ solicitud, onClose, onSuccess }: {
+    solicitud: Solicitud; onClose: () => void; onSuccess: () => void;
+}) {
+    const [nota, setNota] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    async function guardar() {
+        if (!nota.trim()) {
+            toast.error("La nota es obligatoria para descartar el duplicado");
+            return;
+        }
+        setLoading(true);
+        const fd = new FormData();
+        fd.append("id", solicitud.id);
+        fd.append("estado", solicitud.estado); // mantiene el estado actual
+        fd.append("nota", `[No es duplicado] ${nota.trim()}`);
+        const r = await fetch("/api/documentacion", { method: "PATCH", body: fd });
+        if (r.ok) { toast.success("Registrado en el historial ✓"); onSuccess(); }
+        else { const e = await r.json(); toast.error(e.error || "Error"); }
+        setLoading(false);
+    }
+
+    return (
+        <div style={{
+            position: "fixed", inset: 0, zIndex: 9999,
+            background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+        }} onClick={e => e.target === e.currentTarget && onClose()}>
+            <div style={{
+                background: "white", borderRadius: 20, padding: 28, width: "100%", maxWidth: 460,
+                boxShadow: "0 24px 64px rgba(0,0,0,0.2)",
+            }}>
+                <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Descartar duplicado</h3>
+                <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 6 }}>{solicitud.titulo}</p>
+                <p style={{ fontSize: 12, color: "#854d0e", background: "#fef9c3", border: "1px solid #fde047", borderRadius: 8, padding: "8px 12px", marginBottom: 20 }}>
+                    ⚠️ Debes explicar por qué esta solicitud <strong>no es duplicado</strong>. Quedará registrado en el historial.
+                </p>
+
+                <div style={{ marginBottom: 24 }}>
+                    <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>
+                        MOTIVO <span style={{ color: "#cc1111" }}>*</span>
+                    </label>
+                    <textarea value={nota} onChange={e => setNota(e.target.value)}
+                        placeholder="Ej: Es para un cliente diferente con el mismo apellido, o es una renovación del trámite anterior..."
+                        rows={4} style={{
+                            width: "100%", padding: "10px 14px", borderRadius: 12, border: "1.5px solid #e0e0e8",
+                            fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none",
+                            marginBottom: 0, boxSizing: "border-box",
+                        }}
+                        onFocus={e => (e.target as HTMLElement).style.borderColor = "#f59e0b"}
+                        onBlur={e => (e.target as HTMLElement).style.borderColor = "#e0e0e8"} />
+                </div>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                    <button onClick={onClose} style={{
+                        flex: 1, padding: "11px 0", borderRadius: 12, border: "1.5px solid #e0e0e8",
+                        background: "white", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#374151",
+                    }}>Cancelar</button>
+                    <button onClick={guardar} disabled={loading || !nota.trim()} style={{
+                        flex: 1, padding: "11px 0", borderRadius: 12, border: "none",
+                        background: nota.trim() ? "#f59e0b" : "#d1d5db", color: "white", fontSize: 14, fontWeight: 700,
+                        cursor: loading || !nota.trim() ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: loading ? 0.7 : 1,
+                    }}>{loading ? "Guardando..." : "✓ Confirmar y registrar"}</button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 // ─── Tarjeta Solicitud ────────────────────────────────────────────────────────
-function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh }: {
+function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh, duplicadosDe }: {
     sol: Solicitud; esAdmin: boolean; esSenior: boolean; sessionUserId: string; onRefresh: () => void;
+    duplicadosDe?: Solicitud[];
 }) {
     const [expandido, setExpandido] = useState(false);
     const [modalEstado, setModalEstado] = useState(false);
+    const [modalDescartar, setModalDescartar] = useState(false);
     const [lightbox, setLightbox] = useState<string | null>(null);
 
     async function eliminarSolicitud() {
@@ -261,6 +376,11 @@ function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh }: 
                     onClose={() => setModalEstado(false)}
                     onSuccess={() => { setModalEstado(false); onRefresh(); }} />
             )}
+            {modalDescartar && (
+                <ModalDescartarDuplicado solicitud={sol}
+                    onClose={() => setModalDescartar(false)}
+                    onSuccess={() => { setModalDescartar(false); onRefresh(); }} />
+            )}
 
             <div style={{
                 background: "white", borderRadius: 16, border: "1px solid #f0f0f0",
@@ -280,7 +400,43 @@ function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh }: 
                         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 4, flexWrap: "wrap" }}>
                             <h3 style={{ fontWeight: 700, fontSize: 15, color: "#111", margin: 0 }}>{sol.titulo}</h3>
                             <EstadoBadge estado={sol.estado} />
+                            {duplicadosDe && duplicadosDe.length > 0 && (
+                                <span title={`Posible duplicado de: ${duplicadosDe.map(d => d.titulo + " (" + d.creadoPorUser.name + ")").join(", ")}`}
+                                    style={{
+                                        background: "#fef9c3", color: "#854d0e", border: "1px solid #fde047",
+                                        borderRadius: 20, padding: "2px 8px", fontSize: 11, fontWeight: 700,
+                                        cursor: "help", display: "inline-flex", alignItems: "center", gap: 4,
+                                    }}>
+                                    ⚠️ Posible duplicado
+                                </span>
+                            )}
                         </div>
+                        {duplicadosDe && duplicadosDe.length > 0 && (
+                            <div style={{
+                                background: "#fefce8", border: "1px solid #fde047", borderRadius: 10,
+                                padding: "8px 12px", marginBottom: 6, fontSize: 12, color: "#713f12",
+                            }}>
+                                <strong>⚠️ Similar a:</strong>{" "}
+                                {duplicadosDe.map((d, i) => (
+                                    <span key={d.id}>
+                                        {i > 0 && " · "}
+                                        <em>"{d.titulo}"</em> — {d.creadoPorUser.name}
+                                        {" "}
+                                        <EstadoBadge estado={d.estado} />
+                                    </span>
+                                ))}
+                                {(esAdmin || esSenior) && (
+                                    <button onClick={() => setModalDescartar(true)} style={{
+                                        marginTop: 8, display: "inline-flex", alignItems: "center", gap: 4,
+                                        padding: "5px 12px", borderRadius: 8, fontSize: 12, fontWeight: 600,
+                                        background: "white", color: "#854d0e", border: "1px solid #fde047",
+                                        cursor: "pointer", fontFamily: "inherit",
+                                    }}>
+                                        ✕ Descartar duplicado
+                                    </button>
+                                )}
+                            </div>
+                        )}
                         {sol.descripcion && (
                             <p style={{ fontSize: 13, color: "#6b7280", marginBottom: 6 }}>{sol.descripcion}</p>
                         )}
@@ -405,6 +561,8 @@ export default function DocumentacionPage() {
 
     useEffect(() => { cargar(); }, [filtro]);
 
+    const duplicadosMap = detectarDuplicados(solicitudes);
+
     const solicitudesFiltradas = solicitudes.filter(sol => {
         if (!busqueda.trim()) return true;
         const q = busqueda.toLowerCase();
@@ -491,7 +649,8 @@ export default function DocumentacionPage() {
             ) : (
                 <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
                     {solicitudesFiltradas.map(sol => (
-                        <TarjetaSolicitud key={sol.id} sol={sol} esAdmin={esAdmin} esSenior={esSenior} sessionUserId={sessionUserId} onRefresh={cargar} />
+                        <TarjetaSolicitud key={sol.id} sol={sol} esAdmin={esAdmin} esSenior={esSenior} sessionUserId={sessionUserId} onRefresh={cargar}
+                            duplicadosDe={(duplicadosMap.get(sol.id) || []).map(id => solicitudes.find(s => s.id === id)!).filter(Boolean)} />
                     ))}
                 </div>
             )}

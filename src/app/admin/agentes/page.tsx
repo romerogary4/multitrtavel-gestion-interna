@@ -6,11 +6,85 @@ import { Avatar, AvatarUpload } from "@/components/ui/Avatar";
 
 interface Agente { id: string; name: string; email: string; rol: string; activo: boolean; createdAt: string; image?: string | null; }
 
+// ─── Modal Cambiar Contraseña ─────────────────────────────────────────────────
+function ModalCambiarPassword({ agente, onClose }: { agente: Agente; onClose: () => void }) {
+  const [password, setPassword] = useState("");
+  const [confirmar, setConfirmar] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function guardar() {
+    if (password.length < 6) { toast.error("Mínimo 6 caracteres"); return; }
+    if (password !== confirmar) { toast.error("Las contraseñas no coinciden"); return; }
+    setLoading(true);
+    const r = await fetch(`/api/admin/agentes?id=${agente.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ password }),
+    });
+    if (r.ok) { toast.success("Contraseña actualizada ✓"); onClose(); }
+    else { const d = await r.json(); toast.error(d.error || "Error"); }
+    setLoading(false);
+  }
+
+  const inputStyle = {
+    width: "100%", padding: "10px 14px", borderRadius: 12, border: "1.5px solid #e0e0e8",
+    fontSize: 13, fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const,
+  };
+
+  return (
+    <div style={{
+      position: "fixed", inset: 0, zIndex: 9999, background: "rgba(0,0,0,0.5)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: 16,
+    }} onClick={e => e.target === e.currentTarget && onClose()}>
+      <div style={{
+        background: "white", borderRadius: 20, padding: 28, width: "100%", maxWidth: 420,
+        boxShadow: "0 24px 64px rgba(0,0,0,0.2)",
+      }}>
+        <h3 style={{ fontWeight: 700, fontSize: 16, marginBottom: 4 }}>Cambiar contraseña</h3>
+        <p style={{ fontSize: 13, color: "#9ca3af", marginBottom: 20 }}>{agente.name} · {agente.email}</p>
+
+        <div style={{ marginBottom: 14 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>
+            NUEVA CONTRASEÑA
+          </label>
+          <input type="password" value={password} onChange={e => setPassword(e.target.value)}
+            placeholder="Mínimo 6 caracteres" style={inputStyle}
+            onFocus={e => (e.target as HTMLElement).style.borderColor = "#cc1111"}
+            onBlur={e => (e.target as HTMLElement).style.borderColor = "#e0e0e8"} />
+        </div>
+
+        <div style={{ marginBottom: 24 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>
+            CONFIRMAR CONTRASEÑA
+          </label>
+          <input type="password" value={confirmar} onChange={e => setConfirmar(e.target.value)}
+            placeholder="Repite la contraseña" style={inputStyle}
+            onFocus={e => (e.target as HTMLElement).style.borderColor = "#cc1111"}
+            onBlur={e => (e.target as HTMLElement).style.borderColor = "#e0e0e8"} />
+        </div>
+
+        <div style={{ display: "flex", gap: 10 }}>
+          <button onClick={onClose} style={{
+            flex: 1, padding: "11px 0", borderRadius: 12, border: "1.5px solid #e0e0e8",
+            background: "white", fontSize: 14, fontWeight: 600, cursor: "pointer", fontFamily: "inherit", color: "#374151",
+          }}>Cancelar</button>
+          <button onClick={guardar} disabled={loading} style={{
+            flex: 1, padding: "11px 0", borderRadius: 12, border: "none",
+            background: "#cc1111", color: "white", fontSize: 14, fontWeight: 700,
+            cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit", opacity: loading ? 0.7 : 1,
+          }}>{loading ? "Guardando..." : "✓ Guardar"}</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AgentesPage() {
   const [agentes, setAgentes] = useState<Agente[]>([]);
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ name: "", email: "", password: "", rol: "agente" });
   const [creando, setCreando] = useState(false);
+  const [modalPassword, setModalPassword] = useState<Agente | null>(null);
 
   useEffect(() => { cargar(); }, []);
 
@@ -51,6 +125,10 @@ export default function AgentesPage() {
 
   return (
     <div>
+      {/* Modal cambiar contraseña */}
+      {modalPassword && (
+        <ModalCambiarPassword agente={modalPassword} onClose={() => setModalPassword(null)} />
+      )}
       <div className="page-header">
         <h1 className="page-title">Agentes</h1>
         <p style={{ fontSize: 14, color: "#9ca3af", marginLeft: 14 }}>
@@ -148,6 +226,15 @@ export default function AgentesPage() {
                         borderColor: a.activo ? "#fca5a5" : "#86efac"
                       }}>
                       {a.activo ? "Desactivar" : "Activar"}
+                    </button>
+                    <button onClick={() => setModalPassword(a)}
+                      style={{
+                        padding: "5px 10px", fontSize: 12, borderRadius: 8,
+                        border: "1.5px solid #e0e0e8", background: "white",
+                        color: "#6b7280", cursor: "pointer", fontFamily: "inherit",
+                      }}
+                      title="Cambiar contraseña">
+                      🔑
                     </button>
                   </div>
                 </div>
