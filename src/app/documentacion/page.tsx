@@ -33,6 +33,7 @@ const ESTADO_STYLE: Record<string, { bg: string; color: string; label: string }>
     enviado: { bg: "#dbeafe", color: "#1e40af", label: "Enviado" },
     entregado: { bg: "#dcfce7", color: "#166534", label: "Entregado" },
     pagado: { bg: "#f3e8ff", color: "#6b21a8", label: "Pagado" },
+    cancelado: { bg: "#f3f4f6", color: "#6b7280", label: "Cancelado" },
 };
 
 // ─── Detección de duplicados ─────────────────────────────────────────────────
