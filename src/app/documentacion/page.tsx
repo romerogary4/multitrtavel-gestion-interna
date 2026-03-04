@@ -26,7 +26,7 @@ interface Solicitud {
     historial: Historial[];
 }
 
-const ESTADOS = ["solicitado", "enviado", "entregado", "pagado"];
+const ESTADOS = ["solicitado", "enviado", "entregado", "pagado", "cancelado"];
 
 const ESTADO_STYLE: Record<string, { bg: string; color: string; label: string }> = {
     solicitado: { bg: "#fef3c7", color: "#92400e", label: "Solicitado" },
@@ -51,7 +51,7 @@ function tieneDescarte(sol: Solicitud): boolean {
 function detectarDuplicados(solicitudes: Solicitud[]): Map<string, string[]> {
     // Retorna Map<solicitud.id, [ids de duplicados]>
     const grupos = new Map<string, string[]>();
-    const activos = solicitudes.filter(s => s.estado !== "pagado" && !tieneDescarte(s));
+    const activos = solicitudes.filter(s => s.estado !== "pagado" && s.estado !== "cancelado" && !tieneDescarte(s));
 
     for (let i = 0; i < activos.length; i++) {
         for (let j = i + 1; j < activos.length; j++) {
@@ -109,6 +109,10 @@ function ModalCambiarEstado({ solicitud, onClose, onSuccess, esAdmin }: {
             toast.error("Selecciona un estado diferente o añade nota/comprobante");
             return;
         }
+        if (estado === "cancelado" && !nota.trim()) {
+            toast.error("Debes añadir una nota explicando el motivo de cancelación");
+            return;
+        }
         setLoading(true);
         const fd = new FormData();
         fd.append("id", solicitud.id);
@@ -151,13 +155,19 @@ function ModalCambiarEstado({ solicitud, onClose, onSuccess, esAdmin }: {
                 </div>
 
                 {/* Nota */}
-                <textarea placeholder="Nota (opcional)..." value={nota} onChange={e => setNota(e.target.value)}
+                <label style={{ fontSize: 12, fontWeight: 700, color: "#6b7280", display: "block", marginBottom: 6 }}>
+                    NOTA {estado === "cancelado" && <span style={{ color: "#cc1111" }}>* obligatoria</span>}
+                </label>
+                <textarea
+                    placeholder={estado === "cancelado" ? "Motivo de cancelación (obligatorio)..." : "Nota (opcional)..."}
+                    value={nota} onChange={e => setNota(e.target.value)}
                     rows={3} style={{
-                        width: "100%", padding: "10px 14px", borderRadius: 12, border: "1.5px solid #e0e0e8",
+                        width: "100%", padding: "10px 14px", borderRadius: 12,
+                        border: estado === "cancelado" && !nota.trim() ? "1.5px solid #fca5a5" : "1.5px solid #e0e0e8",
                         fontSize: 13, fontFamily: "inherit", resize: "vertical", outline: "none", marginBottom: 12, boxSizing: "border-box",
                     }}
                     onFocus={e => (e.target as HTMLElement).style.borderColor = "#cc1111"}
-                    onBlur={e => (e.target as HTMLElement).style.borderColor = "#e0e0e8"} />
+                    onBlur={e => (e.target as HTMLElement).style.borderColor = estado === "cancelado" && !nota.trim() ? "#fca5a5" : "#e0e0e8"} />
 
                 {/* Comprobante */}
                 <div style={{ marginBottom: 20 }}>
@@ -577,6 +587,7 @@ export default function DocumentacionPage() {
         { value: "enviado", label: "Enviados" },
         { value: "entregado", label: "Entregados" },
         { value: "pagado", label: "Pagados" },
+        { value: "cancelado", label: "Cancelados" },
     ];
 
     return (
