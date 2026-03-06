@@ -17,6 +17,7 @@ const GASTOS_FIJOS: GastoFijo[] = [
   { tipo: "notaria", label: "📋 Notaria", campo: "Protocolo", placeholder: "PROT-001" },
   { tipo: "maleta", label: "🧳 Maleta", campo: "Localizador", placeholder: "MAL789" },
   { tipo: "cambio", label: "💱 Cambio", campo: "Localizador", placeholder: "CAM-001" },
+  { tipo: "seguro", label: "🛡️ Seguro de viaje", campo: "# de póliza", placeholder: "POL-001" },
   { tipo: "otro", label: "📝 Otro", campo: "Descripción", placeholder: "Descripción del gasto" },
 ];
 
