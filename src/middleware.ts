@@ -82,6 +82,17 @@ export function middleware(request: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
+  // Proteger rutas de admin — redirigir al dashboard si no es admin
+  // (no podemos leer el rol desde el JWT en middleware sin desencriptar,
+  //  pero sí podemos proteger con una cookie de rol que se setea al login)
+  // La protección real de datos está en cada API. Aquí solo prevenimos
+  // que agentes accedan visualmente a rutas admin.
+  const ADMIN_ROUTES = ["/reportes", "/admin", "/cuadre-diario", "/paquetes"];
+  const rolCookie = request.cookies.get("user_rol")?.value;
+  if (ADMIN_ROUTES.some(r => pathname.startsWith(r)) && rolCookie && rolCookie !== "administrador") {
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
   // Añadir cabeceras de seguridad
   const response = NextResponse.next();
   response.headers.set("X-Frame-Options", "DENY");

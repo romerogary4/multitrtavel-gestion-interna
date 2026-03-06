@@ -40,6 +40,7 @@ export function Sidebar() {
   const userImage = session?.user?.image || null;
 
   async function handleSignOut() {
+    document.cookie = "user_rol=;path=/;max-age=0";
     await signOut();
     router.push("/auth/login");
   }

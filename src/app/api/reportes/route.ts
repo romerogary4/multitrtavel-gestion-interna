@@ -78,7 +78,7 @@ export async function GET(request: NextRequest) {
       .leftJoin(pagoCliente, eq(pagoCliente.clienteId, cliente.id))
       .where(where)
       .groupBy(cliente.agenteId, user.name);
-    return NextResponse.json(agentes);
+    return NextResponse.json(agentes.filter((a: any) => a.agenteName));
   }
 
   return NextResponse.json({ error: "tipo inválido" }, { status: 400 });

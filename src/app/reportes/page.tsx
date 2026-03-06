@@ -9,6 +9,7 @@ interface Stats {
   totalClientes: number; clientesActivos: number; clientesPendientes: number;
   clientesPendienteAdmin: number; totalIngresos: number;
   ingresoEfectivo: number; ingresoTransferencia: number; ingresoTarjeta: number;
+  totalDevoluciones: number;
 }
 interface AgenteStat { agenteId: string; agenteName: string; totalClientes: number; clientesActivos: number; totalIngresos: number; }
 interface ClienteCuadre {
@@ -105,7 +106,7 @@ export default function ReportesPage() {
               { label: "Total clientes", value: String(stats?.totalClientes || 0), accent: "#cc1111" },
               { label: "Pagados", value: String(stats?.clientesActivos || 0), accent: "#16a34a" },
               { label: "Ingresos totales", value: formatCurrency(stats?.totalIngresos || 0), accent: "#d97706" },
-              { label: "Cobrado (efectivo)", value: formatCurrency(stats?.ingresoEfectivo || 0), accent: "#2563eb" },
+              { label: "Cobrado en efectivo", value: formatCurrency(stats?.ingresoEfectivo || 0), accent: "#2563eb" },
             ].map((k, i) => (
               <div key={i} className="card" style={{ padding: 20, borderTop: `3px solid ${k.accent}` }}>
                 <p style={{
@@ -118,6 +119,25 @@ export default function ReportesPage() {
               </div>
             ))}
           </div>
+
+          {/* Devoluciones alert */}
+          {stats && Number(stats.totalDevoluciones) > 0 && (
+            <div style={{
+              background: "#fff7ed", border: "1px solid #fed7aa", borderRadius: 12,
+              padding: "12px 20px", marginBottom: 24,
+              display: "flex", alignItems: "center", gap: 12,
+            }}>
+              <span style={{ fontSize: 20 }}>↩️</span>
+              <div>
+                <span style={{ fontWeight: 700, color: "#9a3412", fontSize: 14 }}>
+                  Devoluciones en el período: {formatCurrency(Number(stats.totalDevoluciones))}
+                </span>
+                <span style={{ fontSize: 13, color: "#c2410c", marginLeft: 8 }}>
+                  — ya descontadas de los ingresos totales
+                </span>
+              </div>
+            </div>
+          )}
 
           {/* Charts */}
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20, marginBottom: 24 }}>

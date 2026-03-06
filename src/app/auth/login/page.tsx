@@ -16,6 +16,9 @@ export default function LoginPage() {
     try {
       const result = await signIn.email({ email: form.email, password: form.password });
       if (result.error) { toast.error("Credenciales incorrectas"); return; }
+      // Guardar rol en cookie para protección de rutas en middleware
+      const rol = (result.data?.user as any)?.rol || "agente";
+      document.cookie = `user_rol=${rol};path=/;max-age=604800;samesite=strict`;
       router.push("/dashboard");
       router.refresh();
     } catch {
