@@ -345,6 +345,87 @@ function ModalDescartarDuplicado({ solicitud, onClose, onSuccess }: {
     );
 }
 
+// ─── Añadir Comentario / Archivo ─────────────────────────────────────────────
+function AnadirComentario({ solicitudId, estadoActual, onSuccess }: {
+    solicitudId: string; estadoActual: string; onSuccess: () => void;
+}) {
+    const [nota, setNota] = useState("");
+    const [archivo, setArchivo] = useState<File | null>(null);
+    const [loading, setLoading] = useState(false);
+    const fileRef = useRef<HTMLInputElement>(null);
+
+    async function enviar() {
+        if (!nota.trim() && !archivo) {
+            toast.error("Escribe un comentario o adjunta un archivo");
+            return;
+        }
+        setLoading(true);
+        const fd = new FormData();
+        fd.append("id", solicitudId);
+        fd.append("estado", estadoActual); // mantiene el estado actual
+        if (nota.trim()) fd.append("nota", nota.trim());
+        if (archivo) fd.append("comprobante", archivo);
+        const r = await fetch("/api/documentacion", { method: "PATCH", body: fd });
+        if (r.ok) {
+            toast.success("Comentario añadido ✓");
+            setNota(""); setArchivo(null);
+            onSuccess();
+        } else {
+            const e = await r.json();
+            toast.error(e.error || "Error al guardar");
+        }
+        setLoading(false);
+    }
+
+    return (
+        <div style={{
+            marginTop: 16, padding: "14px 16px", background: "white",
+            borderRadius: 12, border: "1.5px solid #e0e0e8",
+        }}>
+            <p style={{ fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 10 }}>
+                Añadir comentario o archivo
+            </p>
+            <textarea
+                value={nota} onChange={e => setNota(e.target.value)}
+                placeholder="Escribe un comentario..."
+                rows={2} style={{
+                    width: "100%", padding: "8px 12px", borderRadius: 10,
+                    border: "1.5px solid #e0e0e8", fontSize: 13, fontFamily: "inherit",
+                    resize: "vertical", outline: "none", boxSizing: "border-box", marginBottom: 8,
+                }}
+                onFocus={e => (e.target as HTMLElement).style.borderColor = "#cc1111"}
+                onBlur={e => (e.target as HTMLElement).style.borderColor = "#e0e0e8"}
+            />
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                <input ref={fileRef} type="file" accept=".pdf,image/*" style={{ display: "none" }}
+                    onChange={e => setArchivo(e.target.files?.[0] || null)} />
+                <button onClick={() => fileRef.current?.click()} style={{
+                    padding: "7px 12px", borderRadius: 8, border: "1.5px dashed #d1d5db",
+                    background: "#fafafa", fontSize: 12, color: "#6b7280",
+                    cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap",
+                }}>
+                    📎 {archivo ? archivo.name : "Adjuntar archivo"}
+                </button>
+                {archivo && (
+                    <button onClick={() => setArchivo(null)} style={{
+                        fontSize: 11, color: "#cc1111", background: "none",
+                        border: "none", cursor: "pointer", padding: 0,
+                    }}>✕</button>
+                )}
+                <div style={{ flex: 1 }} />
+                <button onClick={enviar} disabled={loading} style={{
+                    padding: "7px 16px", borderRadius: 8, border: "none",
+                    background: "#cc1111", color: "white", fontSize: 12, fontWeight: 700,
+                    cursor: loading ? "not-allowed" : "pointer", fontFamily: "inherit",
+                    opacity: loading ? 0.7 : 1, whiteSpace: "nowrap",
+                }}>
+                    {loading ? "Guardando..." : "✓ Añadir"}
+                </button>
+            </div>
+        </div>
+    );
+}
+
 // ─── Tarjeta Solicitud ────────────────────────────────────────────────────────
 function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh, duplicadosDe }: {
     sol: Solicitud; esAdmin: boolean; esSenior: boolean; sessionUserId: string; onRefresh: () => void;
@@ -464,7 +545,7 @@ function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh, du
                         }}>
                             {expandido ? "▲ Ocultar" : "▼ Historial"}
                         </button>
-                        {(esAdmin || esSenior) && (
+                        {(esAdmin || esSenior) && sol.estado !== "cancelado" && (
                             <button onClick={() => setModalEstado(true)} style={{
                                 padding: "6px 12px", borderRadius: 8, border: "none",
                                 background: "#cc1111", color: "white", fontSize: 12, fontWeight: 700,
@@ -544,6 +625,11 @@ function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh, du
                                 </div>
                             ))}
                         </div>
+
+                        {/* ── Añadir comentario / archivo ─────────────────────── */}
+                        {sol.estado !== "cancelado" && (
+                            <AnadirComentario solicitudId={sol.id} estadoActual={sol.estado} onSuccess={onRefresh} />
+                        )}
                     </div>
                 )}
             </div>

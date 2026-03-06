@@ -69,8 +69,8 @@ export async function GET(request: NextRequest) {
     const agentes = await db.select({
       agenteId: cliente.agenteId,
       agenteName: user.name,
-      totalClientes: sql<number>`count(*)`,
-      clientesActivos: sql<number>`count(*) filter (where ${cliente.estado} in ('pagado','activo'))`,
+      totalClientes: sql<number>`count(distinct ${cliente.id})`,
+      clientesActivos: sql<number>`count(distinct ${cliente.id}) filter (where ${cliente.estado} in ('pagado','activo') and ${cliente.estado} != 'devuelto')`,
       totalIngresos: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.confirmado} = true),0)`,
     })
       .from(cliente)
