@@ -10,7 +10,9 @@ type TipoNotif =
     | "servicio_rechazado"
     | "cliente_confirmado"
     | "estado_cliente"
-    | "cuadre_pendiente";
+    | "cuadre_pendiente"
+    | "doc_nueva_solicitud"
+    | "doc_estado_cambiado";
 
 interface CrearNotifOptions {
     tipo: TipoNotif;

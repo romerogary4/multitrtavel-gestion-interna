@@ -61,6 +61,18 @@ export async function POST(request: NextRequest) {
       estado: esAdmin ? "aprobada" : "pendiente",
       revisadoEn: esAdmin ? new Date() : undefined,
     }).returning();
+
+    // Notificar a admins cuando un agente solicita un servicio especial
+    if (!esAdmin) {
+      await crearNotificacion({
+        tipo: "servicio_solicitado",
+        titulo: "Nueva solicitud de servicio especial",
+        mensaje: `${session.user.name} solicitó un servicio especial para ${clienteData.nombre} ${clienteData.apellidos}: ${tipoServicio}`,
+        paraAdmin: true,
+        clienteId: clienteId,
+        servicioId: servicio.id,
+      });
+    }
     return NextResponse.json(servicio, { status: 201 });
   } catch (error) {
     console.error("Error creando servicio:", error);

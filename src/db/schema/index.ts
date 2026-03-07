@@ -276,6 +276,8 @@ export const tipoNotificacionEnum = pgEnum("tipo_notificacion", [
   "cliente_confirmado",
   "estado_cliente",
   "cuadre_pendiente",
+  "doc_nueva_solicitud",
+  "doc_estado_cambiado",
 ]);
 
 export const notificacion = pgTable("notificacion", {

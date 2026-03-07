@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { docSolicitud, docSolicitudHistorial } from "@/db/schema";
 import { getServerSession } from "@/lib/auth-helpers";
+import { crearNotificacion } from "@/lib/notificaciones";
 import { eq, desc, and } from "drizzle-orm";
 import { saveFile, deleteFile, ALLOWED_DOC_TYPES, validateFile } from "@/lib/upload";
 import type { AppSession } from "@/types";
@@ -56,6 +57,14 @@ export async function POST(request: NextRequest) {
         creadoPor: session.user.id,
     });
 
+    // Notificar a admins de nueva solicitud de documentación
+    await crearNotificacion({
+        tipo: "doc_nueva_solicitud",
+        titulo: "Nueva solicitud de documentación",
+        mensaje: `${session.user.name} creó una nueva solicitud: "${body.titulo}"`,
+        paraAdmin: true,
+    });
+
     return NextResponse.json(nueva, { status: 201 });
 }
 
@@ -103,6 +112,28 @@ export async function PATCH(request: NextRequest) {
         comprobante: comprobanteRuta || null,
         creadoPor: session.user.id,
     });
+
+    // Notificar a todos los admins del cambio de estado
+    const estadoLabel: Record<string, string> = {
+        solicitado: "Solicitado", enviado: "Enviado",
+        entregado: "Entregado", pagado: "Pagado", cancelado: "Cancelado",
+    };
+    await crearNotificacion({
+        tipo: "doc_estado_cambiado",
+        titulo: "Cambio de estado en documentación",
+        mensaje: `${session.user.name} cambió "${solicitud.titulo}" a ${estadoLabel[nuevoEstado] || nuevoEstado}${nota ? ": " + nota : ""}`,
+        paraAdmin: true,
+    });
+
+    // También notificar al creador si no es quien hizo el cambio
+    if (solicitud.creadoPor && solicitud.creadoPor !== session.user.id) {
+        await crearNotificacion({
+            tipo: "doc_estado_cambiado",
+            titulo: "Tu solicitud fue actualizada",
+            mensaje: `"${solicitud.titulo}" cambió a ${estadoLabel[nuevoEstado] || nuevoEstado}${nota ? ": " + nota : ""}`,
+            paraAgenteId: solicitud.creadoPor,
+        });
+    }
 
     return NextResponse.json({ ok: true });
 }
