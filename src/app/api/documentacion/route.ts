@@ -85,7 +85,11 @@ export async function PATCH(request: NextRequest) {
 
     const esAdmin = session.user.rol === "administrador";
     const esSenior = session.user.rol === "agente_senior";
-    if (!esAdmin && !esSenior) {
+    const estadoCambia = nuevoEstado !== solicitud.estado;
+
+    // Solo senior/admin pueden cambiar el estado
+    // Cualquier agente puede añadir comentario o archivo sin cambiar estado
+    if (estadoCambia && !esAdmin && !esSenior) {
         return NextResponse.json({ error: "Solo agentes senior y administradores pueden cambiar el estado" }, { status: 403 });
     }
 
