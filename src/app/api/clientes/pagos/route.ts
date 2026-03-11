@@ -40,10 +40,11 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "Faltan campos requeridos" }, { status: 400 });
     }
 
-    const montoNum = Number(monto);
+    const montoNum = Math.round(Number(monto) * 100) / 100;
     if (isNaN(montoNum) || montoNum <= 0) {
       return NextResponse.json({ error: "Monto inválido" }, { status: 400 });
     }
+    const montoStr = montoNum.toFixed(2);
 
     // Verificar que el cliente existe
     const cli = await db.query.cliente.findFirst({ where: eq(cliente.id, clienteId) });
@@ -62,7 +63,7 @@ export async function POST(request: NextRequest) {
 
     // 1. Insertar pago
     await db.insert(pagoCliente).values({
-      clienteId, monto, formaPago: formaPago as any,
+      clienteId, monto: montoStr, formaPago: formaPago as any,
       comprobante: comprobanteRuta, notas: notas || undefined,
       registradoPor: session.user.id,
     });
@@ -70,7 +71,7 @@ export async function POST(request: NextRequest) {
     // 2. Recalcular total pagado
     const [totalResult] = await db.select({ total: sum(pagoCliente.monto) })
       .from(pagoCliente).where(eq(pagoCliente.clienteId, clienteId));
-    const nuevoTotal = Number(totalResult.total || 0);
+    const nuevoTotal = Math.round(Number(totalResult.total || 0) * 100) / 100;
 
     const montoTotal = Number(cli.montoTotal || 0);
     const estaCompleto = montoTotal > 0 && nuevoTotal >= montoTotal;

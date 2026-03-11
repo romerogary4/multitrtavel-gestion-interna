@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
-import { user, account } from "@/db/schema";
+import { user, account, session } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getServerSession } from "@/lib/auth-helpers";
 import type { AppSession } from "@/types";
@@ -8,9 +8,9 @@ import { eq } from "drizzle-orm";
 
 // GET /api/admin/agentes
 export async function GET(request: NextRequest) {
-  const session = await getServerSession() as AppSession | null;
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  if (session.user.rol !== "administrador") {
+  const session_data = await getServerSession() as AppSession | null;
+  if (!session_data) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (session_data.user.rol !== "administrador") {
     return NextResponse.json({ error: "Solo administradores" }, { status: 403 });
   }
 
@@ -32,9 +32,9 @@ export async function GET(request: NextRequest) {
 
 // POST /api/admin/agentes - Crear agente
 export async function POST(request: NextRequest) {
-  const session = await getServerSession() as AppSession | null;
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  if (session.user.rol !== "administrador") {
+  const session_data = await getServerSession() as AppSession | null;
+  if (!session_data) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (session_data.user.rol !== "administrador") {
     return NextResponse.json({ error: "Solo administradores" }, { status: 403 });
   }
 
@@ -71,9 +71,9 @@ export async function POST(request: NextRequest) {
 
 // PATCH /api/admin/agentes - Actualizar agente
 export async function PATCH(request: NextRequest) {
-  const session = await getServerSession() as AppSession | null;
-  if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-  if (session.user.rol !== "administrador") {
+  const session_data = await getServerSession() as AppSession | null;
+  if (!session_data) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+  if (session_data.user.rol !== "administrador") {
     return NextResponse.json({ error: "Solo administradores" }, { status: 403 });
   }
 
@@ -107,6 +107,12 @@ export async function PATCH(request: NextRequest) {
     .set(updateData)
     .where(eq(user.id, id))
     .returning({ id: user.id, name: user.name, email: user.email, rol: user.rol, activo: user.activo });
+
+  // Invalidar sesiones activas para que el nuevo rol tome efecto inmediatamente
+  // El usuario tendrá que hacer login de nuevo con el nuevo rol
+  if (rol || activo !== undefined) {
+    await db.delete(session).where(eq(session.userId, id));
+  }
 
   return NextResponse.json(updated);
 }
