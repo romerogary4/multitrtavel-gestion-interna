@@ -21,6 +21,8 @@ export default function NuevoClientePage() {
   const [busquedaCliente, setBusquedaCliente] = useState("");
   const [resultadosBusqueda, setResultadosBusqueda] = useState<ClienteExistente[]>([]);
   const [modoFrecuente, setModoFrecuente] = useState(false);
+  const [posiblesDuplicados, setPosiblesDuplicados] = useState<ClienteExistente[]>([]);
+  const [duplicadoConfirmado, setDuplicadoConfirmado] = useState(false);
   const docInputRef = useRef<HTMLInputElement>(null);
   const comprobanteRef = useRef<HTMLInputElement>(null);
 
@@ -52,6 +54,22 @@ export default function NuevoClientePage() {
     }, 300);
     return () => clearTimeout(t);
   }, [busquedaCliente]);
+
+  // Detección de duplicados al escribir nombre+apellidos en modo nuevo cliente
+  useEffect(() => {
+    if (modoFrecuente) { setPosiblesDuplicados([]); return; }
+    const nombre = form.nombre.trim();
+    const apellidos = form.apellidos.trim();
+    if (nombre.length < 2 && apellidos.length < 2) { setPosiblesDuplicados([]); return; }
+    setDuplicadoConfirmado(false);
+    const t = setTimeout(async () => {
+      const q = encodeURIComponent(`${nombre} ${apellidos}`.trim());
+      const r = await fetch(`/api/clientes?busqueda=${q}&limite=5`);
+      const d = await r.json();
+      setPosiblesDuplicados(d.clientes || []);
+    }, 400);
+    return () => clearTimeout(t);
+  }, [form.nombre, form.apellidos, modoFrecuente]);
 
   function seleccionarClienteFrecuente(c: ClienteExistente) {
     setClienteExistente(c);
@@ -282,6 +300,58 @@ export default function NuevoClientePage() {
                     placeholder="cliente@email.com" className="input-field" />
                 </Fld>
               </div>
+              {/* Banner de posibles duplicados */}
+              {posiblesDuplicados.length > 0 && !duplicadoConfirmado && (
+                <div style={{
+                  marginTop: 16, padding: "16px 18px",
+                  background: "#fffbeb", border: "2px solid #f59e0b",
+                  borderRadius: 14,
+                }}>
+                  <p style={{ fontWeight: 700, fontSize: 14, color: "#92400e", marginBottom: 10 }}>
+                    ⚠️ Posibles clientes duplicados
+                  </p>
+                  <p style={{ fontSize: 13, color: "#78350f", marginBottom: 12 }}>
+                    Ya existen clientes con un nombre similar. ¿Es uno de estos?
+                  </p>
+                  <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 14 }}>
+                    {posiblesDuplicados.map(c => (
+                      <a key={c.id} href={`/clientes/${c.id}`} target="_blank"
+                        style={{
+                          display: "flex", alignItems: "center", gap: 10,
+                          padding: "10px 14px", borderRadius: 10,
+                          background: "white", border: "1px solid #fde68a",
+                          textDecoration: "none", cursor: "pointer",
+                        }}>
+                        <div style={{
+                          width: 32, height: 32, borderRadius: 8, flexShrink: 0,
+                          background: "linear-gradient(135deg,#f59e0b,#d97706)",
+                          color: "white", display: "flex", alignItems: "center",
+                          justifyContent: "center", fontWeight: 800, fontSize: 14,
+                        }}>
+                          {c.nombre.charAt(0)}
+                        </div>
+                        <div style={{ flex: 1 }}>
+                          <p style={{ fontWeight: 600, fontSize: 13, color: "#111" }}>
+                            {c.nombre} {c.apellidos}
+                          </p>
+                          <p style={{ fontSize: 12, color: "#9ca3af" }}>{c.telefono}</p>
+                        </div>
+                        <span style={{ fontSize: 12, color: "#f59e0b", fontWeight: 600 }}>Ver →</span>
+                      </a>
+                    ))}
+                  </div>
+                  <button onClick={() => setDuplicadoConfirmado(true)}
+                    style={{
+                      width: "100%", padding: "10px", borderRadius: 10,
+                      background: "white", border: "2px solid #f59e0b",
+                      color: "#92400e", fontWeight: 700, fontSize: 13,
+                      cursor: "pointer", fontFamily: "inherit",
+                    }}>
+                    ✓ No es ninguno de estos, continuar con cliente nuevo
+                  </button>
+                </div>
+              )}
+
               <div style={{ marginTop: 16 }}>
                 <Fld label="Dirección">
                   <input value={form.direccion} onChange={e => up("direccion", e.target.value)}
@@ -514,9 +584,14 @@ export default function NuevoClientePage() {
             </button>
             {paso < PASOS.length - 1 ? (
               <button type="button" onClick={() => {
+                if (!modoFrecuente && paso === 0 && posiblesDuplicados.length > 0 && !duplicadoConfirmado) {
+                  toast.warning("Revisa los posibles duplicados antes de continuar");
+                  return;
+                }
                 if (!validarPaso(paso)) { toast.error("Completa los campos obligatorios"); return; }
                 setPaso(p => p + 1);
-              }} className="btn-primary">
+              }} className="btn-primary"
+                style={{ opacity: (!modoFrecuente && paso === 0 && posiblesDuplicados.length > 0 && !duplicadoConfirmado) ? 0.5 : 1 }}>
                 Siguiente →
               </button>
             ) : (
