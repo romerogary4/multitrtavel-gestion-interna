@@ -362,7 +362,7 @@ function AnadirComentario({ solicitudId, estadoActual, onSuccess }: {
         setLoading(true);
         const fd = new FormData();
         fd.append("id", solicitudId);
-        fd.append("estado", estadoActual); // mantiene el estado actual
+        fd.append("estado", estadoActual);
         if (nota.trim()) fd.append("nota", nota.trim());
         if (archivo) fd.append("comprobante", archivo);
         const r = await fetch("/api/documentacion", { method: "PATCH", body: fd });
@@ -545,7 +545,7 @@ function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh, du
                         }}>
                             {expandido ? "▲ Ocultar" : "▼ Historial"}
                         </button>
-                        {(esAdmin || esSenior) && sol.estado !== "cancelado" && (
+                        {(esAdmin || esSenior) && (
                             <button onClick={() => setModalEstado(true)} style={{
                                 padding: "6px 12px", borderRadius: 8, border: "none",
                                 background: "#cc1111", color: "white", fontSize: 12, fontWeight: 700,
@@ -626,7 +626,7 @@ function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh, du
                             ))}
                         </div>
 
-                        {/* ── Añadir comentario / archivo ─────────────────────── */}
+                        {/* Añadir comentario/archivo */}
                         {sol.estado !== "cancelado" && (
                             <AnadirComentario solicitudId={sol.id} estadoActual={sol.estado} onSuccess={onRefresh} />
                         )}
@@ -641,7 +641,7 @@ function TarjetaSolicitud({ sol, esAdmin, esSenior, sessionUserId, onRefresh, du
 export default function DocumentacionPage() {
     const { data: session } = useSession();
     const esAdmin = (session?.user as any)?.rol === "administrador";
-    const esSenior = (session?.user as any)?.rol === "agente_senior";
+    const esSenior = ["agente_senior", "agente_doc"].includes((session?.user as any)?.rol);
     const sessionUserId = (session?.user as any)?.id ?? "";
     const [solicitudes, setSolicitudes] = useState<Solicitud[]>([]);
     const [loading, setLoading] = useState(true);

@@ -15,7 +15,8 @@ export async function GET(
   if (!session) return NextResponse.json({ error: "No autorizado" }, { status: 401 });
 
   const { id } = await params;
-  const esAgente = session.user.rol === "agente";
+  // agente y agente_doc solo pueden ver sus propios clientes
+  const esAgente = ["agente", "agente_doc"].includes(session.user.rol);
 
   const result = await db.query.cliente.findFirst({
     where: esAgente

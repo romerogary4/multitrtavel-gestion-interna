@@ -5,6 +5,8 @@ import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { formatCurrency } from "@/lib/utils";
 
+interface Paquete { id: string; nombre: string; }
+
 interface Cliente {
   id: string; nombre: string; apellidos: string; email?: string; telefono: string;
   estado: string; formaPago?: string; montoPagado?: string; moneda: string;
@@ -32,10 +34,16 @@ export default function ClientesPage() {
   const [salidaHasta, setSalidaHasta] = useState("");
   const [pagina, setPagina] = useState(1);
   const [total, setTotal] = useState(0);
+  const [paqueteId, setPaqueteId] = useState("todos");
+  const [paquetes, setPaquetes] = useState<Paquete[]>([]);
   const [mostrarFiltrosFecha, setMostrarFiltrosFecha] = useState(false);
   const POR_PAG = 15;
 
-  useEffect(() => { cargar(); }, [busqueda, estado, pago, salidaDesde, salidaHasta, pagina]);
+  useEffect(() => {
+    fetch("/api/paquetes").then(r => r.json()).then(setPaquetes).catch(() => { });
+  }, []);
+
+  useEffect(() => { cargar(); }, [busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta, pagina]);
 
   async function cargar() {
     setLoading(true);
@@ -43,6 +51,7 @@ export default function ClientesPage() {
     if (busqueda) p.set("busqueda", busqueda);
     if (estado !== "todos") p.set("estado", estado);
     if (pago !== "todos") p.set("formaPago", pago);
+    if (paqueteId !== "todos") p.set("paquete", paqueteId);
     if (salidaDesde) p.set("salidaDesde", salidaDesde);
     if (salidaHasta) p.set("salidaHasta", salidaHasta);
     const r = await fetch(`/api/clientes?${p}`);
@@ -96,6 +105,11 @@ export default function ClientesPage() {
           <select value={pago} onChange={e => { setPago(e.target.value); setPagina(1); }}
             style={inputStyle}>
             {PAGOS.map(p => <option key={p} value={p}>{p === "todos" ? "Todas las formas" : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
+          </select>
+          <select value={paqueteId} onChange={e => { setPaqueteId(e.target.value); setPagina(1); }}
+            style={inputStyle}>
+            <option value="todos">Todos los paquetes</option>
+            {paquetes.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
           {/* Botón filtro fechas vuelo */}
           <button onClick={() => setMostrarFiltrosFecha(v => !v)}

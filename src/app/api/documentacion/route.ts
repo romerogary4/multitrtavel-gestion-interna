@@ -57,11 +57,11 @@ export async function POST(request: NextRequest) {
         creadoPor: session.user.id,
     });
 
-    // Notificar a admins de nueva solicitud de documentación
+    // Notificar a admins de nueva solicitud
     await crearNotificacion({
         tipo: "doc_nueva_solicitud",
         titulo: "Nueva solicitud de documentación",
-        mensaje: `${session.user.name} creó una nueva solicitud: "${body.titulo}"`,
+        mensaje: `${session.user.name} creó una nueva solicitud: "${titulo.trim()}"`,
         paraAdmin: true,
     });
 
@@ -84,12 +84,12 @@ export async function PATCH(request: NextRequest) {
     if (!solicitud) return NextResponse.json({ error: "Solicitud no encontrada" }, { status: 404 });
 
     const esAdmin = session.user.rol === "administrador";
-    const esSenior = session.user.rol === "agente_senior";
+    const esSeniorDoc = ["agente_senior", "agente_doc"].includes(session.user.rol);
     const estadoCambia = nuevoEstado !== solicitud.estado;
 
-    // Solo senior/admin pueden cambiar el estado
+    // Solo senior/admin pueden cambiar estado
     // Cualquier agente puede añadir comentario o archivo sin cambiar estado
-    if (estadoCambia && !esAdmin && !esSenior) {
+    if (estadoCambia && !esAdmin && !esSeniorDoc) {
         return NextResponse.json({ error: "Solo agentes senior y administradores pueden cambiar el estado" }, { status: 403 });
     }
 
@@ -117,7 +117,7 @@ export async function PATCH(request: NextRequest) {
         creadoPor: session.user.id,
     });
 
-    // Notificar a todos los admins del cambio de estado
+    // Notificar a admins del cambio de estado
     const estadoLabel: Record<string, string> = {
         solicitado: "Solicitado", enviado: "Enviado",
         entregado: "Entregado", pagado: "Pagado", cancelado: "Cancelado",
@@ -129,7 +129,7 @@ export async function PATCH(request: NextRequest) {
         paraAdmin: true,
     });
 
-    // También notificar al creador si no es quien hizo el cambio
+    // Notificar al creador si no es quien hizo el cambio
     if (solicitud.creadoPor && solicitud.creadoPor !== session.user.id) {
         await crearNotificacion({
             tipo: "doc_estado_cambiado",

@@ -22,10 +22,11 @@ export async function GET(request: NextRequest) {
   const salidaHasta = searchParams.get("salidaHasta");
   const pagina = parseInt(searchParams.get("pagina") || "1");
   const limite = Math.min(parseInt(searchParams.get("limite") || "20"), 100); // máx 100 por página
-  const esAgente = session.user.rol === "agente";
+  // agente y agente_doc solo ven sus clientes; agente_clientes y admin ven todos
+  const soloSusClientes = ["agente", "agente_doc"].includes(session.user.rol);
 
   const conditions = [];
-  if (esAgente) conditions.push(eq(cliente.agenteId, session.user.id));
+  if (soloSusClientes) conditions.push(eq(cliente.agenteId, session.user.id));
   if (estado) conditions.push(eq(cliente.estado, estado as any));
   if (formaPago) conditions.push(eq(cliente.formaPago, formaPago as any));
   if (paqueteId) conditions.push(eq(cliente.paqueteId, paqueteId));
@@ -80,7 +81,7 @@ export async function POST(request: NextRequest) {
     }
 
     const esEfectivo = formaPago === "efectivo";
-    const esAgente = session.user.rol === "agente";
+    const esAgente = session.user.rol !== "administrador";
     const montoTotalNum = Number(montoTotal || montoPagado || 0);
     const montoPagadoNum = Number(montoPagado || 0);
     const pagado = tipoPago === "completo" || montoPagadoNum >= montoTotalNum;

@@ -106,7 +106,8 @@ export default function AgentesPage() {
   async function cambiarRol(a: Agente, nuevoRol: string) {
     if (nuevoRol === a.rol) return;
     await fetch(`/api/admin/agentes?id=${a.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rol: nuevoRol }) });
-    toast.success(`Rol cambiado a ${nuevoRol === "administrador" ? "Admin" : nuevoRol === "agente_senior" ? "Senior" : "Agente"}`);
+    const rolLabels: Record<string, string> = { administrador: "Admin", agente_senior: "Senior", agente_doc: "Senior Doc", agente_clientes: "Senior Clientes", agente: "Agente" };
+    toast.success(`Rol cambiado a ${rolLabels[nuevoRol] || nuevoRol}`);
     cargar();
   }
 
@@ -165,6 +166,8 @@ export default function AgentesPage() {
                 className="input-field" style={{ cursor: "pointer" }}>
                 <option value="agente">Agente</option>
                 <option value="agente_senior">Agente Senior</option>
+                <option value="agente_doc">Senior Documentación</option>
+                <option value="agente_clientes">Senior Clientes</option>
                 <option value="administrador">Administrador</option>
               </select>
             </div>
@@ -202,13 +205,15 @@ export default function AgentesPage() {
                     <select value={a.rol} onChange={e => cambiarRol(a, e.target.value)}
                       style={{
                         fontSize: 12, fontWeight: 600, padding: "4px 10px", borderRadius: 99,
-                        background: a.rol === "administrador" ? "#fef3c7" : a.rol === "agente_senior" ? "#dcfce7" : "#f0f0ff",
-                        color: a.rol === "administrador" ? "#92400e" : a.rol === "agente_senior" ? "#166534" : "#4338ca",
-                        border: `1px solid ${a.rol === "administrador" ? "#fde68a" : a.rol === "agente_senior" ? "#86efac" : "#c7d2fe"}`,
+                        background: a.rol === "administrador" ? "#fef3c7" : a.rol === "agente_senior" ? "#dcfce7" : a.rol === "agente_doc" ? "#eff6ff" : a.rol === "agente_clientes" ? "#fdf4ff" : "#f0f0ff",
+                        color: a.rol === "administrador" ? "#92400e" : a.rol === "agente_senior" ? "#166534" : a.rol === "agente_doc" ? "#1d4ed8" : a.rol === "agente_clientes" ? "#7e22ce" : "#4338ca",
+                        border: `1px solid ${a.rol === "administrador" ? "#fde68a" : a.rol === "agente_senior" ? "#86efac" : a.rol === "agente_doc" ? "#bfdbfe" : a.rol === "agente_clientes" ? "#e9d5ff" : "#c7d2fe"}`,
                         cursor: "pointer", fontFamily: "inherit", outline: "none",
                       }}>
                       <option value="agente">Agente</option>
                       <option value="agente_senior">Senior</option>
+                      <option value="agente_doc">Senior Doc</option>
+                      <option value="agente_clientes">Senior Clientes</option>
                       <option value="administrador">Admin</option>
                     </select>
                     <span style={{
