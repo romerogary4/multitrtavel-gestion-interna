@@ -26,11 +26,12 @@ interface Solicitud {
     historial: Historial[];
 }
 
-const ESTADOS = ["solicitado", "enviado", "entregado", "pagado", "cancelado"];
+const ESTADOS = ["solicitado", "enviado", "recibido", "entregado", "pagado", "cancelado"];
 
 const ESTADO_STYLE: Record<string, { bg: string; color: string; label: string }> = {
     solicitado: { bg: "#fef3c7", color: "#92400e", label: "Solicitado" },
     enviado: { bg: "#dbeafe", color: "#1e40af", label: "Enviado" },
+    recibido: { bg: "#fce7f3", color: "#9d174d", label: "Recibido" },
     entregado: { bg: "#dcfce7", color: "#166534", label: "Entregado" },
     pagado: { bg: "#f3e8ff", color: "#6b21a8", label: "Pagado" },
     cancelado: { bg: "#f3f4f6", color: "#6b7280", label: "Cancelado" },
@@ -672,6 +673,7 @@ export default function DocumentacionPage() {
         { value: "todos", label: "Todos" },
         { value: "solicitado", label: "Solicitados" },
         { value: "enviado", label: "Enviados" },
+        { value: "recibido", label: "Recibidos" },
         { value: "entregado", label: "Entregados" },
         { value: "pagado", label: "Pagados" },
         { value: "cancelado", label: "Cancelados" },
@@ -722,7 +724,7 @@ export default function DocumentacionPage() {
                         border: filtro === f.value ? "none" : "1.5px solid #e0e0e8",
                     }}>
                         {f.value !== "todos" && <span style={{ marginRight: 4 }}>
-                            {f.value === "solicitado" ? "🟡" : f.value === "enviado" ? "🔵" : f.value === "entregado" ? "🟢" : "🟣"}
+                            {f.value === "solicitado" ? "🟡" : f.value === "enviado" ? "🔵" : f.value === "recibido" ? "🩷" : f.value === "entregado" ? "🟢" : "🟣"}
                         </span>}
                         {f.label}
                     </button>

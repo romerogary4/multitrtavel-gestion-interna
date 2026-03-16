@@ -334,7 +334,7 @@ export type Tarea = typeof tarea.$inferSelect;
 // ─── Documentación ────────────────────────────────────────────────────────────
 
 export const estadoDocSolicitudEnum = pgEnum("estado_doc_solicitud", [
-  "solicitado", "enviado", "entregado", "pagado", "cancelado",
+  "solicitado", "enviado", "recibido", "entregado", "pagado", "cancelado",
 ]);
 
 export const docSolicitud = pgTable("doc_solicitud", {
