@@ -15,9 +15,10 @@ export default async function ClienteDetailPage({ params }: Props) {
   const session = await requireAuth();
   const { id } = await params;
   const esAdmin = session.user.rol === "administrador";
+  const puedeVerTodos = ["administrador", "agente_clientes", "agente_senior"].includes(session.user.rol);
 
   const clienteData = await db.query.cliente.findFirst({
-    where: esAdmin ? eq(cliente.id, id) : and(eq(cliente.id, id), eq(cliente.agenteId, session.user.id)),
+    where: puedeVerTodos ? eq(cliente.id, id) : and(eq(cliente.id, id), eq(cliente.agenteId, session.user.id)),
     with: {
       paquete: true,
       agente: { columns: { id: true, name: true, email: true, image: true } },
