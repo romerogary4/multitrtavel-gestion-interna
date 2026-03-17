@@ -16,10 +16,11 @@ export async function GET(
 
   const { id } = await params;
   // agente y agente_doc solo pueden ver sus propios clientes
-  const esAgente = ["agente", "agente_doc"].includes(session.user.rol);
+  // agente_clientes, agente_senior y administrador ven todos
+  const soloSusClientes = ["agente", "agente_doc"].includes(session.user.rol);
 
   const result = await db.query.cliente.findFirst({
-    where: esAgente
+    where: soloSusClientes
       ? and(eq(cliente.id, id), eq(cliente.agenteId, session.user.id))
       : eq(cliente.id, id),
     with: {
