@@ -176,7 +176,7 @@ export default function ServiciosPage() {
                         const url = getFileUrl(comp);
                         const pdf = isPdf(comp);
                         return (
-                          <div key={ci} onClick={() => setViendoImagen(url)}
+                          <div key={ci} onClick={() => pdf ? window.open(url, "_blank") : setViendoImagen(url)}
                             style={{
                               width: 100, height: 100, borderRadius: 14, overflow: "hidden",
                               border: "2px solid #f0f0f0", cursor: "pointer", position: "relative",
@@ -316,9 +316,7 @@ export default function ServiciosPage() {
                 position: "absolute", top: -40, right: 0, background: "none", border: "none",
                 color: "white", fontSize: 28, cursor: "pointer"
               }}>✕</button>
-            {viendoImagen.endsWith(".pdf") ? (
-              <iframe src={viendoImagen} style={{ width: "80vw", height: "80vh", borderRadius: 12 }} />
-            ) : (
+            {viendoImagen.endsWith(".pdf") ? null : (
               <img src={viendoImagen} style={{
                 maxWidth: "85vw", maxHeight: "85vh",
                 borderRadius: 16, boxShadow: "0 24px 64px rgba(0,0,0,0.5)"
