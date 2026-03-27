@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { formatCurrency } from "@/lib/utils";
@@ -29,7 +29,6 @@ export default function ClientesPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  // Inicializar filtros desde la URL
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
   const [busqueda, setBusqueda] = useState(searchParams.get("busqueda") || "");
@@ -50,19 +49,23 @@ export default function ClientesPage() {
     fetch("/api/paquetes").then(r => r.json()).then(setPaquetes).catch(() => { });
   }, []);
 
-  // Sincronizar filtros en la URL cada vez que cambian
-  useEffect(() => {
+  // Función para actualizar la URL sin causar re-render de estados
+  function actualizarURL(overrides: Record<string, string> = {}) {
+    const current = {
+      busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta,
+      pagina: String(pagina), ...overrides,
+    };
     const params = new URLSearchParams();
-    if (busqueda) params.set("busqueda", busqueda);
-    if (estado !== "todos") params.set("estado", estado);
-    if (pago !== "todos") params.set("pago", pago);
-    if (paqueteId !== "todos") params.set("paquete", paqueteId);
-    if (salidaDesde) params.set("salidaDesde", salidaDesde);
-    if (salidaHasta) params.set("salidaHasta", salidaHasta);
-    if (pagina > 1) params.set("pagina", String(pagina));
-    const newUrl = params.toString() ? `/clientes?${params.toString()}` : "/clientes";
-    router.replace(newUrl, { scroll: false });
-  }, [busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta, pagina]);
+    if (current.busqueda) params.set("busqueda", current.busqueda);
+    if (current.estado !== "todos") params.set("estado", current.estado);
+    if (current.pago !== "todos") params.set("pago", current.pago);
+    if (current.paqueteId !== "todos") params.set("paquete", current.paqueteId);
+    if (current.salidaDesde) params.set("salidaDesde", current.salidaDesde);
+    if (current.salidaHasta) params.set("salidaHasta", current.salidaHasta);
+    if (Number(current.pagina) > 1) params.set("pagina", current.pagina);
+    const url = params.toString() ? `/clientes?${params.toString()}` : "/clientes";
+    window.history.replaceState(null, "", url);
+  }
 
   useEffect(() => { cargar(); }, [busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta, pagina]);
 
@@ -82,6 +85,7 @@ export default function ClientesPage() {
 
   function limpiarFechas() {
     setSalidaDesde(""); setSalidaHasta(""); setPagina(1);
+    actualizarURL({ salidaDesde: "", salidaHasta: "", pagina: "1" });
   }
 
   const hayFiltroFecha = salidaDesde || salidaHasta;
@@ -114,20 +118,29 @@ export default function ClientesPage() {
       <div className="card" style={{ padding: "16px 20px", marginBottom: 20 }}>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <input placeholder="🔍  Buscar por nombre, email, documento..."
-            value={busqueda} onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
+            value={busqueda} onChange={e => {
+              setBusqueda(e.target.value); setPagina(1);
+              actualizarURL({ busqueda: e.target.value, pagina: "1" });
+            }}
             style={{ flex: 1, minWidth: 200, ...inputStyle, cursor: "text" }}
             onFocus={e => (e.target as HTMLElement).style.borderColor = "#cc1111"}
             onBlur={e => (e.target as HTMLElement).style.borderColor = "#e0e0e8"} />
-          <select value={estado} onChange={e => { setEstado(e.target.value); setPagina(1); }}
-            style={inputStyle}>
+          <select value={estado} onChange={e => {
+            setEstado(e.target.value); setPagina(1);
+            actualizarURL({ estado: e.target.value, pagina: "1" });
+          }} style={inputStyle}>
             {ESTADOS.map(e => <option key={e} value={e}>{e === "todos" ? "Todos los estados" : estadoLabel[e] || e}</option>)}
           </select>
-          <select value={pago} onChange={e => { setPago(e.target.value); setPagina(1); }}
-            style={inputStyle}>
+          <select value={pago} onChange={e => {
+            setPago(e.target.value); setPagina(1);
+            actualizarURL({ pago: e.target.value, pagina: "1" });
+          }} style={inputStyle}>
             {PAGOS.map(p => <option key={p} value={p}>{p === "todos" ? "Todas las formas" : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
           </select>
-          <select value={paqueteId} onChange={e => { setPaqueteId(e.target.value); setPagina(1); }}
-            style={inputStyle}>
+          <select value={paqueteId} onChange={e => {
+            setPaqueteId(e.target.value); setPagina(1);
+            actualizarURL({ paqueteId: e.target.value, pagina: "1" });
+          }} style={inputStyle}>
             <option value="todos">Todos los paquetes</option>
             {paquetes.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
@@ -157,13 +170,19 @@ export default function ClientesPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <label style={{ fontSize: 12, color: "#6b7280" }}>Desde</label>
               <input type="date" value={salidaDesde}
-                onChange={e => { setSalidaDesde(e.target.value); setPagina(1); }}
+                onChange={e => {
+                  setSalidaDesde(e.target.value); setPagina(1);
+                  actualizarURL({ salidaDesde: e.target.value, pagina: "1" });
+                }}
                 style={{ ...inputStyle, cursor: "pointer" }} />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <label style={{ fontSize: 12, color: "#6b7280" }}>Hasta</label>
               <input type="date" value={salidaHasta}
-                onChange={e => { setSalidaHasta(e.target.value); setPagina(1); }}
+                onChange={e => {
+                  setSalidaHasta(e.target.value); setPagina(1);
+                  actualizarURL({ salidaHasta: e.target.value, pagina: "1" });
+                }}
                 style={{ ...inputStyle, cursor: "pointer" }} />
             </div>
             {hayFiltroFecha && (
@@ -271,11 +290,11 @@ export default function ClientesPage() {
             display: "flex", justifyContent: "center", alignItems: "center",
             gap: 8, padding: "16px", borderTop: "1px solid #f0f0f0"
           }}>
-            <button onClick={() => setPagina(p => Math.max(1, p - 1))} disabled={pagina === 1}
-              className="btn-secondary" style={{ padding: "7px 14px", fontSize: 13 }}>← Anterior</button>
+            <button onClick={() => { setPagina(p => Math.max(1, p - 1)); actualizarURL({ pagina: String(Math.max(1, pagina - 1)) }); }}
+              disabled={pagina === 1} className="btn-secondary" style={{ padding: "7px 14px", fontSize: 13 }}>← Anterior</button>
             <span style={{ fontSize: 13, color: "#9ca3af" }}>Página {pagina} de {totalPags}</span>
-            <button onClick={() => setPagina(p => Math.min(totalPags, p + 1))} disabled={pagina === totalPags}
-              className="btn-secondary" style={{ padding: "7px 14px", fontSize: 13 }}>Siguiente →</button>
+            <button onClick={() => { setPagina(p => Math.min(totalPags, p + 1)); actualizarURL({ pagina: String(Math.min(totalPags, pagina + 1)) }); }}
+              disabled={pagina === totalPags} className="btn-secondary" style={{ padding: "7px 14px", fontSize: 13 }}>Siguiente →</button>
           </div>
         )}
       </div>
