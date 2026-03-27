@@ -75,6 +75,7 @@ export async function POST(request: NextRequest) {
     const montoPagado = formData.get("montoPagado") as string;
     const moneda = (formData.get("moneda") as string) || "EUR";
     const notas = formData.get("notas") as string;
+    const localizador = formData.get("localizador") as string;
 
     if (!nombre || !apellidos || !telefono) {
       return NextResponse.json({ error: "Nombre, apellidos y teléfono son obligatorios" }, { status: 400 });
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
       direccion: direccion || undefined, nacionalidad: nacionalidad || undefined,
       tipoDocumento: tipoDocumento || undefined, numeroDocumento: numeroDocumento || undefined,
       imagenDocumento,
-      paqueteId: paqueteId || undefined, destino: destino || undefined,
+      paqueteId: paqueteId || undefined, destino: destino || undefined, localizador: localizador || undefined,
       fechaSalida: fechaSalida ? new Date(fechaSalida) : undefined,
       fechaRegreso: fechaRegreso ? new Date(fechaRegreso) : undefined,
       formaPago: formaPago as any,

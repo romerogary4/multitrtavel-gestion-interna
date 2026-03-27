@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { formatCurrency } from "@/lib/utils";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useRouter } from "next/navigation";
 
 interface Paquete { id: string; nombre: string; }
 
@@ -17,55 +17,59 @@ interface Cliente {
 
 const ESTADOS = ["todos", "pagado", "pendiente_pago", "pendiente_confirmacion", "pendiente_admin", "activo", "cancelado", "devuelto"];
 const PAGOS = ["todos", "efectivo", "transferencia", "tarjeta"];
+const STORAGE_KEY = "clientes_filtros";
 
 function formatFecha(fecha?: string) {
   if (!fecha) return null;
   return new Date(fecha).toLocaleDateString("es-ES", { day: "2-digit", month: "short", year: "numeric" });
 }
 
+function getFiltrosGuardados() {
+  try {
+    const raw = sessionStorage.getItem(STORAGE_KEY);
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch { return null; }
+}
+
 export default function ClientesPage() {
   const { data: session } = useSession();
   const esAdmin = (session?.user as any)?.rol === "administrador";
   const router = useRouter();
-  const searchParams = useSearchParams();
+  const initialized = useRef(false);
+
+  // Cargar filtros guardados al inicializar
+  const saved = typeof window !== "undefined" && !initialized.current ? getFiltrosGuardados() : null;
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busqueda, setBusqueda] = useState(searchParams.get("busqueda") || "");
-  const [estado, setEstado] = useState(searchParams.get("estado") || "todos");
-  const [pago, setPago] = useState(searchParams.get("pago") || "todos");
-  const [salidaDesde, setSalidaDesde] = useState(searchParams.get("salidaDesde") || "");
-  const [salidaHasta, setSalidaHasta] = useState(searchParams.get("salidaHasta") || "");
-  const [pagina, setPagina] = useState(Number(searchParams.get("pagina")) || 1);
+  const [busqueda, setBusqueda] = useState(saved?.busqueda || "");
+  const [estado, setEstado] = useState(saved?.estado || "todos");
+  const [pago, setPago] = useState(saved?.pago || "todos");
+  const [salidaDesde, setSalidaDesde] = useState(saved?.salidaDesde || "");
+  const [salidaHasta, setSalidaHasta] = useState(saved?.salidaHasta || "");
+  const [pagina, setPagina] = useState(saved?.pagina || 1);
   const [total, setTotal] = useState(0);
-  const [paqueteId, setPaqueteId] = useState(searchParams.get("paquete") || "todos");
+  const [paqueteId, setPaqueteId] = useState(saved?.paqueteId || "todos");
   const [paquetes, setPaquetes] = useState<Paquete[]>([]);
   const [mostrarFiltrosFecha, setMostrarFiltrosFecha] = useState(
-    !!(searchParams.get("salidaDesde") || searchParams.get("salidaHasta"))
+    !!(saved?.salidaDesde || saved?.salidaHasta)
   );
   const POR_PAG = 15;
 
   useEffect(() => {
+    initialized.current = true;
     fetch("/api/paquetes").then(r => r.json()).then(setPaquetes).catch(() => { });
   }, []);
 
-  // Función para actualizar la URL sin causar re-render de estados
-  function actualizarURL(overrides: Record<string, string> = {}) {
-    const current = {
-      busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta,
-      pagina: String(pagina), ...overrides,
-    };
-    const params = new URLSearchParams();
-    if (current.busqueda) params.set("busqueda", current.busqueda);
-    if (current.estado !== "todos") params.set("estado", current.estado);
-    if (current.pago !== "todos") params.set("pago", current.pago);
-    if (current.paqueteId !== "todos") params.set("paquete", current.paqueteId);
-    if (current.salidaDesde) params.set("salidaDesde", current.salidaDesde);
-    if (current.salidaHasta) params.set("salidaHasta", current.salidaHasta);
-    if (Number(current.pagina) > 1) params.set("pagina", current.pagina);
-    const url = params.toString() ? `/clientes?${params.toString()}` : "/clientes";
-    window.history.replaceState(null, "", url);
-  }
+  // Guardar filtros en sessionStorage cada vez que cambian
+  useEffect(() => {
+    try {
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
+        busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta, pagina
+      }));
+    } catch { }
+  }, [busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta, pagina]);
 
   useEffect(() => { cargar(); }, [busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta, pagina]);
 
@@ -83,12 +87,19 @@ export default function ClientesPage() {
     setClientes(d.clientes || []); setTotal(d.total || 0); setLoading(false);
   }
 
+  function limpiarFiltros() {
+    setBusqueda(""); setEstado("todos"); setPago("todos");
+    setPaqueteId("todos"); setSalidaDesde(""); setSalidaHasta("");
+    setPagina(1); setMostrarFiltrosFecha(false);
+    try { sessionStorage.removeItem(STORAGE_KEY); } catch { }
+  }
+
   function limpiarFechas() {
     setSalidaDesde(""); setSalidaHasta(""); setPagina(1);
-    actualizarURL({ salidaDesde: "", salidaHasta: "", pagina: "1" });
   }
 
   const hayFiltroFecha = salidaDesde || salidaHasta;
+  const hayAlgunFiltro = busqueda || estado !== "todos" || pago !== "todos" || paqueteId !== "todos" || hayFiltroFecha;
   const totalPags = Math.ceil(total / POR_PAG);
 
   const estadoLabel: Record<string, string> = {
@@ -118,29 +129,20 @@ export default function ClientesPage() {
       <div className="card" style={{ padding: "16px 20px", marginBottom: 20 }}>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <input placeholder="🔍  Buscar por nombre, email, documento..."
-            value={busqueda} onChange={e => {
-              setBusqueda(e.target.value); setPagina(1);
-              actualizarURL({ busqueda: e.target.value, pagina: "1" });
-            }}
+            value={busqueda} onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
             style={{ flex: 1, minWidth: 200, ...inputStyle, cursor: "text" }}
             onFocus={e => (e.target as HTMLElement).style.borderColor = "#cc1111"}
             onBlur={e => (e.target as HTMLElement).style.borderColor = "#e0e0e8"} />
-          <select value={estado} onChange={e => {
-            setEstado(e.target.value); setPagina(1);
-            actualizarURL({ estado: e.target.value, pagina: "1" });
-          }} style={inputStyle}>
+          <select value={estado} onChange={e => { setEstado(e.target.value); setPagina(1); }}
+            style={inputStyle}>
             {ESTADOS.map(e => <option key={e} value={e}>{e === "todos" ? "Todos los estados" : estadoLabel[e] || e}</option>)}
           </select>
-          <select value={pago} onChange={e => {
-            setPago(e.target.value); setPagina(1);
-            actualizarURL({ pago: e.target.value, pagina: "1" });
-          }} style={inputStyle}>
+          <select value={pago} onChange={e => { setPago(e.target.value); setPagina(1); }}
+            style={inputStyle}>
             {PAGOS.map(p => <option key={p} value={p}>{p === "todos" ? "Todas las formas" : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
           </select>
-          <select value={paqueteId} onChange={e => {
-            setPaqueteId(e.target.value); setPagina(1);
-            actualizarURL({ paqueteId: e.target.value, pagina: "1" });
-          }} style={inputStyle}>
+          <select value={paqueteId} onChange={e => { setPaqueteId(e.target.value); setPagina(1); }}
+            style={inputStyle}>
             <option value="todos">Todos los paquetes</option>
             {paquetes.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
@@ -154,6 +156,12 @@ export default function ClientesPage() {
             }}>
             ✈️ Vuelos {hayFiltroFecha ? "●" : ""}
           </button>
+          {hayAlgunFiltro && (
+            <button onClick={limpiarFiltros}
+              style={{ fontSize: 12, color: "#cc1111", background: "none", border: "none", cursor: "pointer", fontFamily: "inherit", whiteSpace: "nowrap" }}>
+              ✕ Limpiar filtros
+            </button>
+          )}
           <span style={{ fontSize: 13, color: "#9ca3af", whiteSpace: "nowrap" }}>
             {total} resultado{total !== 1 ? "s" : ""}
           </span>
@@ -170,19 +178,13 @@ export default function ClientesPage() {
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <label style={{ fontSize: 12, color: "#6b7280" }}>Desde</label>
               <input type="date" value={salidaDesde}
-                onChange={e => {
-                  setSalidaDesde(e.target.value); setPagina(1);
-                  actualizarURL({ salidaDesde: e.target.value, pagina: "1" });
-                }}
+                onChange={e => { setSalidaDesde(e.target.value); setPagina(1); }}
                 style={{ ...inputStyle, cursor: "pointer" }} />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <label style={{ fontSize: 12, color: "#6b7280" }}>Hasta</label>
               <input type="date" value={salidaHasta}
-                onChange={e => {
-                  setSalidaHasta(e.target.value); setPagina(1);
-                  actualizarURL({ salidaHasta: e.target.value, pagina: "1" });
-                }}
+                onChange={e => { setSalidaHasta(e.target.value); setPagina(1); }}
                 style={{ ...inputStyle, cursor: "pointer" }} />
             </div>
             {hayFiltroFecha && (
@@ -290,11 +292,11 @@ export default function ClientesPage() {
             display: "flex", justifyContent: "center", alignItems: "center",
             gap: 8, padding: "16px", borderTop: "1px solid #f0f0f0"
           }}>
-            <button onClick={() => { setPagina(p => Math.max(1, p - 1)); actualizarURL({ pagina: String(Math.max(1, pagina - 1)) }); }}
-              disabled={pagina === 1} className="btn-secondary" style={{ padding: "7px 14px", fontSize: 13 }}>← Anterior</button>
+            <button onClick={() => setPagina((p: number) => Math.max(1, p - 1))} disabled={pagina === 1}
+              className="btn-secondary" style={{ padding: "7px 14px", fontSize: 13 }}>← Anterior</button>
             <span style={{ fontSize: 13, color: "#9ca3af" }}>Página {pagina} de {totalPags}</span>
-            <button onClick={() => { setPagina(p => Math.min(totalPags, p + 1)); actualizarURL({ pagina: String(Math.min(totalPags, pagina + 1)) }); }}
-              disabled={pagina === totalPags} className="btn-secondary" style={{ padding: "7px 14px", fontSize: 13 }}>Siguiente →</button>
+            <button onClick={() => setPagina((p: number) => Math.min(totalPags, p + 1))} disabled={pagina === totalPags}
+              className="btn-secondary" style={{ padding: "7px 14px", fontSize: 13 }}>Siguiente →</button>
           </div>
         )}
       </div>

@@ -62,7 +62,7 @@ export async function PATCH(
   const allowedFields = [
     "nombre", "apellidos", "email", "telefono", "direccion",
     "nacionalidad", "tipoDocumento", "numeroDocumento",
-    "paqueteId", "destino", "fechaSalida", "fechaRegreso",
+    "paqueteId", "destino", "localizador", "fechaSalida", "fechaRegreso",
     "formaPago", "moneda", "notas",
   ];
 
