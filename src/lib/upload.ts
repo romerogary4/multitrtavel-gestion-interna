@@ -4,10 +4,10 @@ import { randomUUID } from "crypto";
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || "./uploads";
 
-// Extensiones permitidas (doble validación: MIME + extensión)
 const ALLOWED_EXTENSIONS_MAP: Record<string, string[]> = {
-  "image/jpeg": [".jpg", ".jpeg"],
-  "image/jpg": [".jpg", ".jpeg"],
+  "image/jpeg": [".jpg", ".jpeg", ".jfif"],
+  "image/jpg": [".jpg", ".jpeg", ".jfif"],
+  "image/jfif": [".jfif"],
   "image/png": [".png"],
   "image/webp": [".webp"],
   "application/pdf": [".pdf"],
@@ -24,23 +24,16 @@ export async function saveFile(
   originalName: string,
   subdir: string = "general"
 ): Promise<{ rutaArchivo: string; nombreOriginal: string; tamano: number }> {
-  // Normalizar separadores (Windows → Linux)
   const normalizedSubdir = subdir.replace(/\\/g, "/");
-
   const ext = path.extname(originalName).toLowerCase();
   if (!Object.values(ALLOWED_EXTENSIONS_MAP).flat().includes(ext)) {
     throw new Error(`Extensión no permitida: ${ext}`);
   }
-
   const dir = await ensureUploadDir(normalizedSubdir);
   const fileName = `${randomUUID()}${ext}`;
   const filePath = path.join(dir, fileName);
-
   await fs.writeFile(filePath, buffer);
-
-  // Ruta relativa con forward slashes siempre
   const rutaRelativa = `${normalizedSubdir}/${fileName}`;
-
   return {
     rutaArchivo: rutaRelativa,
     nombreOriginal: path.basename(originalName),
@@ -52,7 +45,6 @@ export async function deleteFile(rutaArchivo: string): Promise<void> {
   try {
     const normalized = rutaArchivo.replace(/\\/g, "/");
     const filePath = path.join(UPLOAD_DIR, normalized);
-    // Seguridad: evitar path traversal
     const resolved = path.resolve(filePath);
     const resolvedBase = path.resolve(UPLOAD_DIR);
     if (!resolved.startsWith(resolvedBase)) return;
@@ -70,6 +62,7 @@ export function getFileUrl(rutaArchivo: string): string {
 export const ALLOWED_IMAGE_TYPES = [
   "image/jpeg",
   "image/jpg",
+  "image/jfif",
   "image/png",
   "image/webp",
 ];
@@ -78,6 +71,7 @@ export const ALLOWED_DOC_TYPES = [
   "application/pdf",
   "image/jpeg",
   "image/jpg",
+  "image/jfif",
   "image/png",
 ];
 
@@ -103,7 +97,6 @@ export function validateFile(
   return { valid: true };
 }
 
-// Validar extensión además del MIME type
 export function validateFileExtension(
   mimeType: string,
   originalName: string

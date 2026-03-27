@@ -4,13 +4,14 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSession } from "@/lib/auth-client";
 import { formatCurrency } from "@/lib/utils";
+import { useRouter, useSearchParams } from "next/navigation";
 
 interface Paquete { id: string; nombre: string; }
 
 interface Cliente {
   id: string; nombre: string; apellidos: string; email?: string; telefono: string;
   estado: string; formaPago?: string; montoPagado?: string; moneda: string;
-  destino?: string; creadoEn: string; fechaSalida?: string; fechaRegreso?: string;
+  destino?: string; localizador?: string; creadoEn: string; fechaSalida?: string; fechaRegreso?: string;
   paquete?: { nombre: string }; agente?: { name: string };
 }
 
@@ -25,23 +26,43 @@ function formatFecha(fecha?: string) {
 export default function ClientesPage() {
   const { data: session } = useSession();
   const esAdmin = (session?.user as any)?.rol === "administrador";
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Inicializar filtros desde la URL
   const [clientes, setClientes] = useState<Cliente[]>([]);
   const [loading, setLoading] = useState(true);
-  const [busqueda, setBusqueda] = useState("");
-  const [estado, setEstado] = useState("todos");
-  const [pago, setPago] = useState("todos");
-  const [salidaDesde, setSalidaDesde] = useState("");
-  const [salidaHasta, setSalidaHasta] = useState("");
-  const [pagina, setPagina] = useState(1);
+  const [busqueda, setBusqueda] = useState(searchParams.get("busqueda") || "");
+  const [estado, setEstado] = useState(searchParams.get("estado") || "todos");
+  const [pago, setPago] = useState(searchParams.get("pago") || "todos");
+  const [salidaDesde, setSalidaDesde] = useState(searchParams.get("salidaDesde") || "");
+  const [salidaHasta, setSalidaHasta] = useState(searchParams.get("salidaHasta") || "");
+  const [pagina, setPagina] = useState(Number(searchParams.get("pagina")) || 1);
   const [total, setTotal] = useState(0);
-  const [paqueteId, setPaqueteId] = useState("todos");
+  const [paqueteId, setPaqueteId] = useState(searchParams.get("paquete") || "todos");
   const [paquetes, setPaquetes] = useState<Paquete[]>([]);
-  const [mostrarFiltrosFecha, setMostrarFiltrosFecha] = useState(false);
+  const [mostrarFiltrosFecha, setMostrarFiltrosFecha] = useState(
+    !!(searchParams.get("salidaDesde") || searchParams.get("salidaHasta"))
+  );
   const POR_PAG = 15;
 
   useEffect(() => {
     fetch("/api/paquetes").then(r => r.json()).then(setPaquetes).catch(() => { });
   }, []);
+
+  // Sincronizar filtros en la URL cada vez que cambian
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (busqueda) params.set("busqueda", busqueda);
+    if (estado !== "todos") params.set("estado", estado);
+    if (pago !== "todos") params.set("pago", pago);
+    if (paqueteId !== "todos") params.set("paquete", paqueteId);
+    if (salidaDesde) params.set("salidaDesde", salidaDesde);
+    if (salidaHasta) params.set("salidaHasta", salidaHasta);
+    if (pagina > 1) params.set("pagina", String(pagina));
+    const newUrl = params.toString() ? `/clientes?${params.toString()}` : "/clientes";
+    router.replace(newUrl, { scroll: false });
+  }, [busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta, pagina]);
 
   useEffect(() => { cargar(); }, [busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta, pagina]);
 
@@ -91,7 +112,6 @@ export default function ClientesPage() {
 
       {/* Filtros */}
       <div className="card" style={{ padding: "16px 20px", marginBottom: 20 }}>
-        {/* Fila principal */}
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <input placeholder="🔍  Buscar por nombre, email, documento..."
             value={busqueda} onChange={e => { setBusqueda(e.target.value); setPagina(1); }}
@@ -111,7 +131,6 @@ export default function ClientesPage() {
             <option value="todos">Todos los paquetes</option>
             {paquetes.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
-          {/* Botón filtro fechas vuelo */}
           <button onClick={() => setMostrarFiltrosFecha(v => !v)}
             style={{
               ...inputStyle, cursor: "pointer", display: "flex", alignItems: "center", gap: 6,
@@ -127,7 +146,6 @@ export default function ClientesPage() {
           </span>
         </div>
 
-        {/* Filtro fechas de vuelo — desplegable */}
         {mostrarFiltrosFecha && (
           <div style={{
             marginTop: 12, paddingTop: 12, borderTop: "1px solid #f0f0f0",
@@ -175,6 +193,7 @@ export default function ClientesPage() {
                   <th>Cliente</th>
                   <th>Contacto</th>
                   <th>Paquete</th>
+                  <th>Localizador</th>
                   <th>✈️ Vuelo</th>
                   {esAdmin && <th>Agente</th>}
                   <th>Pago</th>
@@ -185,7 +204,7 @@ export default function ClientesPage() {
               <tbody>
                 {clientes.map(c => (
                   <tr key={c.id} style={{ cursor: "pointer" }}
-                    onClick={() => window.location.href = `/clientes/${c.id}`}>
+                    onClick={() => router.push(`/clientes/${c.id}`)}>
                     <td>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{
@@ -209,6 +228,9 @@ export default function ClientesPage() {
                       {c.email && <p style={{ fontSize: 12, color: "#9ca3af" }}>{c.email}</p>}
                     </td>
                     <td style={{ fontSize: 13, color: "#374151" }}>{c.paquete?.nombre || "—"}</td>
+                    <td style={{ fontSize: 13, color: "#374151", fontWeight: c.localizador ? 600 : 400 }}>
+                      {c.localizador || "—"}
+                    </td>
                     <td>
                       {c.fechaSalida ? (
                         <div>
@@ -244,7 +266,6 @@ export default function ClientesPage() {
           )}
         </div>
 
-        {/* Paginación */}
         {totalPags > 1 && (
           <div style={{
             display: "flex", justifyContent: "center", alignItems: "center",

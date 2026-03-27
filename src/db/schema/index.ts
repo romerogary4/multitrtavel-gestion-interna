@@ -111,13 +111,14 @@ export const cliente = pgTable("cliente", {
   // Paquete contratado
   paqueteId: uuid("paquete_id").references(() => paquete.id),
   destino: text("destino"),
+  localizador: text("localizador"),
   fechaSalida: timestamp("fecha_salida"),
   fechaRegreso: timestamp("fecha_regreso"),
   // Pago
   formaPago: formaPagoEnum("forma_pago"),
-  tipoPago: tipoPagoEnum("tipo_pago").default("completo"),       // completo o plazo
-  montoTotal: decimal("monto_total", { precision: 10, scale: 2 }), // precio total acordado
-  montoPagado: decimal("monto_pagado", { precision: 10, scale: 2 }), // lo que ha pagado hasta ahora
+  tipoPago: tipoPagoEnum("tipo_pago").default("completo"),
+  montoTotal: decimal("monto_total", { precision: 10, scale: 2 }),
+  montoPagado: decimal("monto_pagado", { precision: 10, scale: 2 }),
   moneda: text("moneda").default("EUR"),
   // Estado del proceso
   estado: estadoClienteEnum("estado").notNull().default("pendiente"),
@@ -144,7 +145,7 @@ export const pagoCliente = pgTable("pago_cliente", {
   monto: decimal("monto", { precision: 10, scale: 2 }).notNull(),
   moneda: text("moneda").default("EUR"),
   formaPago: formaPagoEnum("forma_pago").notNull(),
-  comprobante: text("comprobante"),    // ruta del archivo
+  comprobante: text("comprobante"),
   notas: text("notas"),
   registradoPor: text("registrado_por").references(() => user.id),
   confirmado: boolean("confirmado").notNull().default(false),
@@ -164,7 +165,7 @@ export const devolucion = pgTable("devolucion", {
   monto: decimal("monto", { precision: 10, scale: 2 }).notNull(),
   moneda: text("moneda").default("EUR"),
   motivo: text("motivo").notNull(),
-  comprobante: text("comprobante"),    // ruta del archivo
+  comprobante: text("comprobante"),
   procesadoPor: text("procesado_por").references(() => user.id),
   creadoEn: timestamp("creado_en").notNull().defaultNow(),
 });
@@ -248,8 +249,6 @@ export type CuadreDiario = typeof cuadreDiario.$inferSelect;
 export type PagoCliente = typeof pagoCliente.$inferSelect;
 export type Devolucion = typeof devolucion.$inferSelect;
 
-
-
 // ─── Catálogo de tipos de servicio especial ───────────────────────────────────
 
 export const tipoServicio = pgTable("catalogo_servicio", {
@@ -286,12 +285,9 @@ export const notificacion = pgTable("notificacion", {
   titulo: text("titulo").notNull(),
   mensaje: text("mensaje").notNull(),
   leida: boolean("leida").notNull().default(false),
-  // A quién va dirigida (null = todos los admins)
   userId: text("user_id").references(() => user.id, { onDelete: "cascade" }),
-  // Solo admins, o solo el agente específico
   paraAdmin: boolean("para_admin").notNull().default(false),
   paraAgente: boolean("para_agente").notNull().default(false),
-  // Referencia al recurso relacionado
   clienteId: uuid("cliente_id").references(() => cliente.id, { onDelete: "cascade" }),
   servicioId: uuid("servicio_id"),
   creadoEn: timestamp("creado_en").notNull().defaultNow(),
@@ -314,12 +310,10 @@ export const tarea = pgTable("tarea", {
   completada: boolean("completada").notNull().default(false),
   prioridad: prioridadEnum("prioridad").notNull().default("media"),
   fechaLimite: timestamp("fecha_limite"),
-  recordatorio: timestamp("recordatorio"),     // cuándo avisar
+  recordatorio: timestamp("recordatorio"),
   recordatorioEnviado: boolean("recordatorio_enviado").notNull().default(false),
-  // Dueño y asignación
   creadoPor: text("creado_por").notNull().references(() => user.id, { onDelete: "cascade" }),
   asignadoA: text("asignado_a").references(() => user.id, { onDelete: "set null" }),
-  // Timestamps
   completadaEn: timestamp("completada_en"),
   creadoEn: timestamp("creado_en").notNull().defaultNow(),
   actualizadoEn: timestamp("actualizado_en").notNull().defaultNow(),
@@ -331,6 +325,7 @@ export const tarea = pgTable("tarea", {
 ]);
 
 export type Tarea = typeof tarea.$inferSelect;
+
 // ─── Documentación ────────────────────────────────────────────────────────────
 
 export const estadoDocSolicitudEnum = pgEnum("estado_doc_solicitud", [

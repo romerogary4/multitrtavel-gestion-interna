@@ -32,7 +32,7 @@ export default function NuevoClientePage() {
     nombre: "", apellidos: "", email: "", telefono: "", direccion: "",
     nacionalidad: "", tipoDocumento: "Pasaporte", numeroDocumento: "",
     imagenDocumento: null as File | null,
-    paqueteId: "", destino: "", fechaSalida: "", fechaRegreso: "",
+    paqueteId: "", destino: "", localizador: "", fechaSalida: "", fechaRegreso: "",
     tipoPago: "completo" as "completo" | "plazo",
     formaPago: "", montoTotal: "", montoPagado: "", moneda: "EUR", notas: "",
     comprobantePago: null as File | null,
@@ -429,6 +429,12 @@ export default function NuevoClientePage() {
                 <Fld label="Destino *">
                   <input value={form.destino} onChange={e => up("destino", e.target.value)}
                     placeholder="Guatemala, El Salvador..." className="input-field" />
+                </Fld>
+              </div>
+              <div style={{ marginTop: 16 }}>
+                <Fld label="Localizador">
+                  <input value={form.localizador} onChange={e => up("localizador", e.target.value)}
+                    placeholder="Ej: ABC123" className="input-field" />
                 </Fld>
               </div>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
