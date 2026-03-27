@@ -16,7 +16,7 @@ interface Devolucion { id: string; monto: string; moneda: string; motivo: string
 interface ClienteData {
   id: string; nombre: string; apellidos: string; email?: string; telefono: string;
   direccion?: string; nacionalidad?: string; tipoDocumento?: string; numeroDocumento?: string;
-  imagenDocumento?: string; paquete?: { nombre: string }; destino?: string;
+  imagenDocumento?: string; paquete?: { nombre: string }; destino?: string; localizador?: string;
   fechaSalida?: string; fechaRegreso?: string; formaPago?: string; tipoPago?: string;
   montoTotal?: string; montoPagado?: string; moneda: string; estado: string; notas?: string;
   agente?: { id: string; name: string; email: string; image?: string };
@@ -340,6 +340,12 @@ export function ClienteDetailClient({ clienteData: initial, esAdmin, sessionUser
                 </div>
               ))}
             </div>
+            {/* Localizador editable */}
+            <LocalizadorEditable
+              clienteId={data.id}
+              localizador={data.localizador}
+              onChange={(v) => setData(d => ({ ...d, localizador: v }))}
+            />
           </div>
 
           {/* Información de pago */}
@@ -665,6 +671,76 @@ export function ClienteDetailClient({ clienteData: initial, esAdmin, sessionUser
               ↗ Abrir en nueva pestaña
             </a>
           </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+
+// ── Localizador editable ────────────────────────────────────────────────────
+function LocalizadorEditable({ clienteId, localizador, onChange }: {
+  clienteId: string; localizador?: string; onChange: (v: string) => void;
+}) {
+  const [editando, setEditando] = useState(false);
+  const [valor, setValor] = useState(localizador || "");
+  const [loading, setLoading] = useState(false);
+
+  async function guardar() {
+    setLoading(true);
+    const r = await fetch(`/api/clientes/${clienteId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ localizador: valor }),
+    });
+    if (r.ok) {
+      onChange(valor);
+      setEditando(false);
+      toast.success("Localizador actualizado ✓");
+    } else {
+      toast.error("Error al guardar");
+    }
+    setLoading(false);
+  }
+
+  return (
+    <div style={{ marginTop: 14, paddingTop: 14, borderTop: "1px solid #f5f5f5" }}>
+      <p style={{
+        fontSize: 11, fontWeight: 700, color: "#9ca3af",
+        textTransform: "uppercase", letterSpacing: "0.06em", marginBottom: 8
+      }}>Localizador</p>
+      {editando ? (
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input
+            value={valor}
+            onChange={e => setValor(e.target.value.toUpperCase())}
+            placeholder="Ej: ABC123"
+            className="input-field"
+            style={{ maxWidth: 200, fontSize: 14, fontWeight: 600, letterSpacing: "0.05em" }}
+            autoFocus
+          />
+          <button onClick={guardar} disabled={loading} className="btn-primary"
+            style={{ fontSize: 13, padding: "8px 14px" }}>
+            {loading ? "..." : "✓"}
+          </button>
+          <button onClick={() => { setEditando(false); setValor(localizador || ""); }}
+            className="btn-secondary" style={{ fontSize: 13, padding: "8px 14px" }}>
+            Cancelar
+          </button>
+        </div>
+      ) : (
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <p style={{ fontSize: 14, color: "#111", fontWeight: 600, letterSpacing: "0.05em" }}>
+            {localizador || <span style={{ color: "#9ca3af", fontWeight: 400 }}>Sin localizador</span>}
+          </p>
+          <button onClick={() => setEditando(true)}
+            style={{
+              fontSize: 12, color: "#2563eb", background: "#eff6ff",
+              border: "1px solid #bfdbfe", borderRadius: 8, padding: "3px 10px",
+              cursor: "pointer", fontFamily: "inherit"
+            }}>
+            ✏️ Editar
+          </button>
         </div>
       )}
     </div>
