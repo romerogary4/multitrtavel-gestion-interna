@@ -41,7 +41,6 @@ export function SolicitudServicioForm({ clienteId, esAdmin }: Props) {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!form.justificacion.trim()) { toast.error("La justificación es obligatoria"); return; }
     if (!form.tipoServicioId) { toast.error("Selecciona un tipo de servicio"); return; }
 
     setLoading(true);
@@ -55,7 +54,7 @@ export function SolicitudServicioForm({ clienteId, esAdmin }: Props) {
           tipoServicio: tipoSeleccionado?.nombre || "otro",
           descripcionServicio: form.descripcionServicio || undefined,
           monto: form.monto || undefined,
-          justificacion: form.justificacion,
+          justificacion: form.justificacion || "Sin justificación",
         }),
       });
       if (!res.ok) { const err = await res.json(); throw new Error(err.error); }
@@ -207,11 +206,11 @@ export function SolicitudServicioForm({ clienteId, esAdmin }: Props) {
             fontSize: 11, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase",
             letterSpacing: "0.06em", marginBottom: 6
           }}>
-            Justificación <span style={{ color: "#cc1111" }}>*</span>
+            Justificación (opcional)
           </p>
           <textarea value={form.justificacion}
             onChange={e => setForm({ ...form, justificacion: e.target.value })}
-            placeholder="Explica brevemente el motivo..." rows={3} required
+            placeholder="Explica brevemente el motivo..." rows={3}
             style={{
               width: "100%", padding: "9px 12px", borderRadius: 10,
               border: "1.5px solid #e0e0e8", fontSize: 13, outline: "none",
