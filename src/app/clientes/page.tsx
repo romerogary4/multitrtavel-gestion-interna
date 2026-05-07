@@ -8,11 +8,17 @@ import { useRouter } from "next/navigation";
 
 interface Paquete { id: string; nombre: string; }
 
+interface ValidacionVuelo {
+  idaConfirmada: boolean; idaComentario?: string;
+  vueltaConfirmada: boolean; vueltaComentario?: string;
+}
+
 interface Cliente {
   id: string; nombre: string; apellidos: string; email?: string; telefono: string;
   estado: string; formaPago?: string; montoPagado?: string; moneda: string;
   destino?: string; localizador?: string; creadoEn: string; fechaSalida?: string; fechaRegreso?: string;
   paquete?: { nombre: string }; agente?: { name: string };
+  validacionVuelos?: ValidacionVuelo[];
 }
 
 const ESTADOS = ["todos", "pagado", "pendiente_pago", "pendiente_confirmacion", "pendiente_admin", "activo", "cancelado", "devuelto"];
@@ -32,13 +38,106 @@ function getFiltrosGuardados() {
   } catch { return null; }
 }
 
+// ── Componente validación vuelos ──────────────────────────────────────────────
+function ValidacionVuelosCell({ clienteId, validacion, canEdit }: {
+  clienteId: string;
+  validacion?: ValidacionVuelo;
+  canEdit: boolean;
+}) {
+  const [ida, setIda] = useState(validacion?.idaConfirmada || false);
+  const [vuelta, setVuelta] = useState(validacion?.vueltaConfirmada || false);
+  const [idaComentario, setIdaComentario] = useState(validacion?.idaComentario || "");
+  const [vueltaComentario, setVueltaComentario] = useState(validacion?.vueltaComentario || "");
+  const [expanded, setExpanded] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function guardar(campo: "ida" | "vuelta", valor: boolean, comentario: string) {
+    setSaving(true);
+    await fetch("/api/vuelos-confirmados", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clienteId, campo, valor, comentario }),
+    });
+    setSaving(false);
+  }
+
+  return (
+    <div onClick={e => e.stopPropagation()} style={{ minWidth: 160 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        {/* Ida */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <input
+            type="checkbox"
+            checked={ida}
+            disabled={!canEdit || saving}
+            onChange={async e => {
+              setIda(e.target.checked);
+              await guardar("ida", e.target.checked, idaComentario);
+            }}
+            style={{ width: 15, height: 15, cursor: canEdit ? "pointer" : "default", accentColor: "#2563eb" }}
+          />
+          <span style={{ fontSize: 12, color: ida ? "#2563eb" : "#9ca3af", fontWeight: ida ? 600 : 400 }}>
+            ✈️ Ida {ida ? "✓" : ""}
+          </span>
+        </div>
+        {/* Vuelta */}
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <input
+            type="checkbox"
+            checked={vuelta}
+            disabled={!canEdit || saving}
+            onChange={async e => {
+              setVuelta(e.target.checked);
+              await guardar("vuelta", e.target.checked, vueltaComentario);
+            }}
+            style={{ width: 15, height: 15, cursor: canEdit ? "pointer" : "default", accentColor: "#16a34a" }}
+          />
+          <span style={{ fontSize: 12, color: vuelta ? "#16a34a" : "#9ca3af", fontWeight: vuelta ? 600 : 400 }}>
+            🔄 Vuelta {vuelta ? "✓" : ""}
+          </span>
+        </div>
+      </div>
+      {/* Comentarios expandibles — solo si puede editar */}
+      {canEdit && (
+        <div style={{ marginTop: 4 }}>
+          <button
+            onClick={() => setExpanded(v => !v)}
+            style={{ fontSize: 10, color: "#9ca3af", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
+            {expanded ? "▲ ocultar" : "▼ comentarios"}
+          </button>
+          {expanded && (
+            <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 4 }}>
+              <input
+                value={idaComentario}
+                onChange={e => setIdaComentario(e.target.value)}
+                onBlur={() => guardar("ida", ida, idaComentario)}
+                placeholder="Nota ida..."
+                style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid #e0e0e8", fontFamily: "inherit", outline: "none" }}
+              />
+              <input
+                value={vueltaComentario}
+                onChange={e => setVueltaComentario(e.target.value)}
+                onBlur={() => guardar("vuelta", vuelta, vueltaComentario)}
+                placeholder="Nota vuelta..."
+                style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid #e0e0e8", fontFamily: "inherit", outline: "none" }}
+              />
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ClientesPage() {
   const { data: session } = useSession();
-  const esAdmin = (session?.user as any)?.rol === "administrador";
+  const rol = (session?.user as any)?.rol;
+  const esAdmin = rol === "administrador";
+  const esAgenteClientes = rol === "agente_clientes";
+  const verValidacionVuelos = esAdmin || esAgenteClientes;
   const router = useRouter();
   const initialized = useRef(false);
 
-  // Cargar filtros guardados al inicializar
   const saved = typeof window !== "undefined" && !initialized.current ? getFiltrosGuardados() : null;
 
   const [clientes, setClientes] = useState<Cliente[]>([]);
@@ -62,7 +161,6 @@ export default function ClientesPage() {
     fetch("/api/paquetes").then(r => r.json()).then(setPaquetes).catch(() => { });
   }, []);
 
-  // Guardar filtros en sessionStorage cada vez que cambian
   useEffect(() => {
     try {
       sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
@@ -82,6 +180,7 @@ export default function ClientesPage() {
     if (paqueteId !== "todos") p.set("paquete", paqueteId);
     if (salidaDesde) p.set("salidaDesde", salidaDesde);
     if (salidaHasta) p.set("salidaHasta", salidaHasta);
+    if (verValidacionVuelos) p.set("conVuelos", "1");
     const r = await fetch(`/api/clientes?${p}`);
     const d = await r.json();
     setClientes(d.clientes || []); setTotal(d.total || 0); setLoading(false);
@@ -116,7 +215,6 @@ export default function ClientesPage() {
 
   return (
     <div>
-      {/* Header */}
       <div className="page-header">
         <h1 className="page-title">Clientes</h1>
         <Link href="/clientes/nuevo" className="btn-primary"
@@ -125,7 +223,6 @@ export default function ClientesPage() {
         </Link>
       </div>
 
-      {/* Filtros */}
       <div className="card" style={{ padding: "16px 20px", marginBottom: 20 }}>
         <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
           <input placeholder="🔍  Buscar por nombre, email, documento..."
@@ -133,16 +230,13 @@ export default function ClientesPage() {
             style={{ flex: 1, minWidth: 200, ...inputStyle, cursor: "text" }}
             onFocus={e => (e.target as HTMLElement).style.borderColor = "#cc1111"}
             onBlur={e => (e.target as HTMLElement).style.borderColor = "#e0e0e8"} />
-          <select value={estado} onChange={e => { setEstado(e.target.value); setPagina(1); }}
-            style={inputStyle}>
+          <select value={estado} onChange={e => { setEstado(e.target.value); setPagina(1); }} style={inputStyle}>
             {ESTADOS.map(e => <option key={e} value={e}>{e === "todos" ? "Todos los estados" : estadoLabel[e] || e}</option>)}
           </select>
-          <select value={pago} onChange={e => { setPago(e.target.value); setPagina(1); }}
-            style={inputStyle}>
+          <select value={pago} onChange={e => { setPago(e.target.value); setPagina(1); }} style={inputStyle}>
             {PAGOS.map(p => <option key={p} value={p}>{p === "todos" ? "Todas las formas" : p.charAt(0).toUpperCase() + p.slice(1)}</option>)}
           </select>
-          <select value={paqueteId} onChange={e => { setPaqueteId(e.target.value); setPagina(1); }}
-            style={inputStyle}>
+          <select value={paqueteId} onChange={e => { setPaqueteId(e.target.value); setPagina(1); }} style={inputStyle}>
             <option value="todos">Todos los paquetes</option>
             {paquetes.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
           </select>
@@ -177,15 +271,11 @@ export default function ClientesPage() {
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <label style={{ fontSize: 12, color: "#6b7280" }}>Desde</label>
-              <input type="date" value={salidaDesde}
-                onChange={e => { setSalidaDesde(e.target.value); setPagina(1); }}
-                style={{ ...inputStyle, cursor: "pointer" }} />
+              <input type="date" value={salidaDesde} onChange={e => { setSalidaDesde(e.target.value); setPagina(1); }} style={{ ...inputStyle, cursor: "pointer" }} />
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <label style={{ fontSize: 12, color: "#6b7280" }}>Hasta</label>
-              <input type="date" value={salidaHasta}
-                onChange={e => { setSalidaHasta(e.target.value); setPagina(1); }}
-                style={{ ...inputStyle, cursor: "pointer" }} />
+              <input type="date" value={salidaHasta} onChange={e => { setSalidaHasta(e.target.value); setPagina(1); }} style={{ ...inputStyle, cursor: "pointer" }} />
             </div>
             {hayFiltroFecha && (
               <button onClick={limpiarFechas}
@@ -197,7 +287,6 @@ export default function ClientesPage() {
         )}
       </div>
 
-      {/* Tabla */}
       <div className="card" style={{ overflow: "hidden" }}>
         <div className="data-table-wrapper">
           {loading ? (
@@ -220,6 +309,7 @@ export default function ClientesPage() {
                   <th>Pago</th>
                   <th style={{ textAlign: "right" }}>Monto</th>
                   <th style={{ textAlign: "center" }}>Estado</th>
+                  {verValidacionVuelos && <th style={{ textAlign: "center" }}>Confirmación vuelos</th>}
                 </tr>
               </thead>
               <tbody>
@@ -237,9 +327,7 @@ export default function ClientesPage() {
                           {c.nombre.charAt(0)}
                         </div>
                         <div>
-                          <p style={{ fontWeight: 600, color: "#111", fontSize: 14 }}>
-                            {c.nombre} {c.apellidos}
-                          </p>
+                          <p style={{ fontWeight: 600, color: "#111", fontSize: 14 }}>{c.nombre} {c.apellidos}</p>
                           {c.destino && <p style={{ fontSize: 12, color: "#9ca3af" }}>✈ {c.destino}</p>}
                         </div>
                       </div>
@@ -255,31 +343,30 @@ export default function ClientesPage() {
                     <td>
                       {c.fechaSalida ? (
                         <div>
-                          <p style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>
-                            {formatFecha(c.fechaSalida)}
-                          </p>
-                          {c.fechaRegreso && (
-                            <p style={{ fontSize: 11, color: "#9ca3af" }}>
-                              Regreso: {formatFecha(c.fechaRegreso)}
-                            </p>
-                          )}
+                          <p style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{formatFecha(c.fechaSalida)}</p>
+                          {c.fechaRegreso && <p style={{ fontSize: 11, color: "#9ca3af" }}>Regreso: {formatFecha(c.fechaRegreso)}</p>}
                         </div>
                       ) : (
                         <span style={{ fontSize: 13, color: "#d1d5db" }}>—</span>
                       )}
                     </td>
                     {esAdmin && <td style={{ fontSize: 13, color: "#374151" }}>{c.agente?.name || "—"}</td>}
-                    <td style={{ fontSize: 13, color: "#374151", textTransform: "capitalize" }}>
-                      {c.formaPago || "—"}
-                    </td>
+                    <td style={{ fontSize: 13, color: "#374151", textTransform: "capitalize" }}>{c.formaPago || "—"}</td>
                     <td style={{ textAlign: "right", fontWeight: 700, color: "#cc1111" }}>
                       {c.montoPagado ? formatCurrency(c.montoPagado) : "—"}
                     </td>
                     <td style={{ textAlign: "center" }}>
-                      <span className={`badge badge-${c.estado}`}>
-                        {estadoLabel[c.estado] || c.estado}
-                      </span>
+                      <span className={`badge badge-${c.estado}`}>{estadoLabel[c.estado] || c.estado}</span>
                     </td>
+                    {verValidacionVuelos && (
+                      <td style={{ textAlign: "center" }}>
+                        <ValidacionVuelosCell
+                          clienteId={c.id}
+                          validacion={c.validacionVuelos?.[0]}
+                          canEdit={esAdmin || esAgenteClientes}
+                        />
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>
@@ -288,10 +375,7 @@ export default function ClientesPage() {
         </div>
 
         {totalPags > 1 && (
-          <div style={{
-            display: "flex", justifyContent: "center", alignItems: "center",
-            gap: 8, padding: "16px", borderTop: "1px solid #f0f0f0"
-          }}>
+          <div style={{ display: "flex", justifyContent: "center", alignItems: "center", gap: 8, padding: "16px", borderTop: "1px solid #f0f0f0" }}>
             <button onClick={() => setPagina((p: number) => Math.max(1, p - 1))} disabled={pagina === 1}
               className="btn-secondary" style={{ padding: "7px 14px", fontSize: 13 }}>← Anterior</button>
             <span style={{ fontSize: 13, color: "#9ca3af" }}>Página {pagina} de {totalPags}</span>

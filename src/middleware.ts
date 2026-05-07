@@ -35,8 +35,16 @@ function getClientIP(request: NextRequest): string {
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Auth API — rate limit en login/sign-in
+  // Auth API
   if (pathname.startsWith("/api/auth")) {
+    // Bloquear registro público — solo se crean usuarios desde /admin/agentes
+    if (pathname.includes("/sign-up")) {
+      return new NextResponse(
+        JSON.stringify({ error: "Registro no permitido" }),
+        { status: 403, headers: { "Content-Type": "application/json" } }
+      );
+    }
+    // Rate limit en login/sign-in
     if (pathname.includes("/sign-in") || pathname.includes("/login")) {
       const ip = getClientIP(request);
       if (!checkRateLimit(ip)) {
@@ -82,11 +90,7 @@ export function middleware(request: NextRequest) {
     return NextResponse.json({ error: "No autorizado" }, { status: 401 });
   }
 
-  // Proteger rutas de admin — redirigir al dashboard si no es admin
-  // (no podemos leer el rol desde el JWT en middleware sin desencriptar,
-  //  pero sí podemos proteger con una cookie de rol que se setea al login)
-  // La protección real de datos está en cada API. Aquí solo prevenimos
-  // que agentes accedan visualmente a rutas admin.
+  // Proteger rutas de admin
   const ADMIN_ROUTES = ["/reportes", "/admin", "/cuadre-diario", "/paquetes"];
   const rolCookie = request.cookies.get("user_rol")?.value;
   if (ADMIN_ROUTES.some(r => pathname.startsWith(r)) && rolCookie && rolCookie !== "administrador") {

@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { db } from "@/db";
 import { pagoCliente, cliente } from "@/db/schema";
 import { getServerSession } from "@/lib/auth-helpers";
-import { eq, sum } from "drizzle-orm";
+import { eq, sum, and } from "drizzle-orm";
 import { crearNotificacion } from "@/lib/notificaciones";
 import { saveFile, ALLOWED_DOC_TYPES, validateFile } from "@/lib/upload";
 import type { AppSession } from "@/types";
@@ -13,6 +13,17 @@ export async function GET(request: NextRequest) {
   const clienteId = new URL(request.url).searchParams.get("clienteId");
   if (!clienteId) return NextResponse.json({ error: "clienteId requerido" }, { status: 400 });
   try {
+    // Verificar que el agente tiene acceso a este cliente
+    const esAdmin = session.user.rol === "administrador";
+    const puedeVerTodos = ["administrador", "agente_clientes", "agente_senior"].includes(session.user.rol);
+    const cliCheck = await db.query.cliente.findFirst({
+      where: puedeVerTodos
+        ? eq(cliente.id, clienteId)
+        : and(eq(cliente.id, clienteId), eq(cliente.agenteId, session.user.id)),
+      columns: { id: true },
+    });
+    if (!cliCheck) return NextResponse.json({ error: "No autorizado" }, { status: 403 });
+
     const pagos = await db.query.pagoCliente.findMany({
       where: eq(pagoCliente.clienteId, clienteId),
       with: { registradoPor: { columns: { name: true } } },
@@ -46,9 +57,14 @@ export async function POST(request: NextRequest) {
     }
     const montoStr = montoNum.toFixed(2);
 
-    // Verificar que el cliente existe
-    const cli = await db.query.cliente.findFirst({ where: eq(cliente.id, clienteId) });
-    if (!cli) return NextResponse.json({ error: "Cliente no encontrado" }, { status: 404 });
+    // Verificar que el cliente existe y el agente tiene acceso
+    const puedeVerTodos = ["administrador", "agente_clientes", "agente_senior"].includes(session.user.rol);
+    const cli = await db.query.cliente.findFirst({
+      where: puedeVerTodos
+        ? eq(cliente.id, clienteId)
+        : and(eq(cliente.id, clienteId), eq(cliente.agenteId, session.user.id)),
+    });
+    if (!cli) return NextResponse.json({ error: "Cliente no encontrado o sin acceso" }, { status: 404 });
 
     // Subir comprobante si existe
     let comprobanteRuta: string | undefined;

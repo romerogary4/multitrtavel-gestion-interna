@@ -23,6 +23,7 @@ export async function GET(request: NextRequest) {
   const pagina = parseInt(searchParams.get("pagina") || "1");
   const limite = Math.min(parseInt(searchParams.get("limite") || "20"), 100); // máx 100 por página
   // agente y agente_doc solo ven sus clientes; agente_clientes y admin ven todos
+  const conVuelos = searchParams.get("conVuelos") === "1";
   const soloSusClientes = ["agente", "agente_doc"].includes(session.user.rol);
 
   const conditions = [];
@@ -41,7 +42,7 @@ export async function GET(request: NextRequest) {
   const where = conditions.length > 0 ? and(...conditions) : undefined;
   const [clientes, total] = await Promise.all([
     db.query.cliente.findMany({
-      where, with: { paquete: true, agente: { columns: { id: true, name: true, email: true, image: true } } },
+      where, with: { paquete: true, agente: { columns: { id: true, name: true, email: true, image: true } }, ...(conVuelos ? { validacionVuelos: { columns: { idaConfirmada: true, idaComentario: true, vueltaConfirmada: true, vueltaComentario: true } } } : {}) },
       orderBy: [desc(cliente.creadoEn)], limit: limite, offset: (pagina - 1) * limite,
     }),
     db.select({ count: sql<number>`count(*)` }).from(cliente).where(where).then(r => r[0].count),

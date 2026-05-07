@@ -27,6 +27,14 @@ interface Cuadre {
 
 const COLORS = ["#cc1111", "#2563eb", "#d97706"];
 
+interface ClienteContabilidad {
+  id: string; nombre: string; apellidos: string; estado: string;
+  creadoEn: string; moneda: string;
+  paquete?: { nombre: string }; agente?: { name: string };
+  pagos: { monto: string }[];
+  contabilidad: { contabilizado: boolean; comentario?: string; contabilizadoEn?: string; contabilizadoPorUser?: { name: string } }[];
+}
+
 export default function ReportesPage() {
   const { data: session } = useSession();
   const [stats, setStats] = useState<Stats | null>(null);
@@ -36,6 +44,9 @@ export default function ReportesPage() {
   const [desde, setDesde] = useState("");
   const [hasta, setHasta] = useState("");
   const [cuadreAbierto, setCuadreAbierto] = useState<string | null>(null);
+  const [registroVentas, setRegistroVentas] = useState<ClienteContabilidad[]>([]);
+  const [comentariosAbiertos, setComentariosAbiertos] = useState<Record<string, string>>({});
+  const [loadingContab, setLoadingContab] = useState<Record<string, boolean>>({});
   const esAdmin = (session?.user as any)?.rol === "administrador";
 
   useEffect(() => { cargar(); }, [desde, hasta, esAdmin]);
@@ -45,12 +56,29 @@ export default function ReportesPage() {
     const p = new URLSearchParams();
     if (desde) p.set("desde", desde);
     if (hasta) p.set("hasta", hasta);
-    const [r1, r2, r3] = await Promise.all([
+    const [r1, r2, r3, r4] = await Promise.all([
       fetch(`/api/reportes?tipo=resumen&${p}`).then(r => r.json()),
       esAdmin ? fetch(`/api/reportes?tipo=por_agente&${p}`).then(r => r.json()) : Promise.resolve([]),
       esAdmin ? fetch(`/api/cuadre?${p}`).then(r => r.json()) : Promise.resolve([]),
+      esAdmin ? fetch(`/api/contabilidad?${p}`).then(r => r.json()) : Promise.resolve([]),
     ]);
-    setStats(r1); setAgentes(r2); setCuadres(Array.isArray(r3) ? r3 : []); setLoading(false);
+    setStats(r1); setAgentes(r2); setCuadres(Array.isArray(r3) ? r3 : []); setRegistroVentas(Array.isArray(r4) ? r4 : []); setLoading(false);
+  }
+
+  async function toggleContabilizado(clienteId: string, contabilizado: boolean) {
+    const comentario = comentariosAbiertos[clienteId] || "";
+    setLoadingContab(p => ({ ...p, [clienteId]: true }));
+    await fetch("/api/contabilidad", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ clienteId, contabilizado, comentario }),
+    });
+    setRegistroVentas(prev => prev.map(c =>
+      c.id === clienteId
+        ? { ...c, contabilidad: [{ contabilizado, comentario, contabilizadoEn: new Date().toISOString() }] }
+        : c
+    ));
+    setLoadingContab(p => ({ ...p, [clienteId]: false }));
   }
 
   const pagoData = stats ? [
@@ -238,6 +266,107 @@ export default function ReportesPage() {
                   ))}
                 </tbody>
               </table>
+            </div>
+          )}
+
+          {/* ── Registro de ventas ───────────────────────────────────────── */}
+          {esAdmin && (
+            <div className="card" style={{ overflow: "hidden", marginBottom: 24 }}>
+              <div style={{ padding: "18px 20px", borderBottom: "1px solid #f0f0f0", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ fontFamily: "var(--font-playfair)", fontWeight: 700, fontSize: 15, color: "#0f0f0f", display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ width: 3, height: 18, background: "#16a34a", borderRadius: 4, display: "block" }} />
+                  Registro de ventas
+                </h3>
+                <div style={{ display: "flex", gap: 16, alignItems: "center" }}>
+                  <span style={{ fontSize: 12, color: "#9ca3af" }}>{registroVentas.length} clientes</span>
+                  <span style={{ fontSize: 12, color: "#16a34a", fontWeight: 600 }}>
+                    ✅ {registroVentas.filter(c => c.contabilidad?.[0]?.contabilizado).length} contabilizados
+                  </span>
+                </div>
+              </div>
+              {registroVentas.length === 0 ? (
+                <p style={{ padding: 32, textAlign: "center", color: "#9ca3af", fontSize: 14 }}>
+                  No hay clientes en este período
+                </p>
+              ) : (
+                <div>
+                  {registroVentas.map(c => {
+                    const totalPagado = c.pagos.reduce((s, p) => s + Number(p.monto), 0);
+                    const contab = c.contabilidad?.[0];
+                    const esContabilizado = contab?.contabilizado || false;
+                    const comentarioActual = comentariosAbiertos[c.id] ?? (contab?.comentario || "");
+                    return (
+                      <div key={c.id} style={{
+                        display: "grid", gridTemplateColumns: "40px 1fr 120px 120px 200px",
+                        alignItems: "center", gap: 12, padding: "12px 20px",
+                        borderBottom: "1px solid #f5f5f5",
+                        background: esContabilizado ? "#f0fdf4" : "white",
+                        transition: "background 0.2s",
+                      }}>
+                        {/* Checkbox */}
+                        <div style={{ display: "flex", justifyContent: "center" }}>
+                          <input
+                            type="checkbox"
+                            checked={esContabilizado}
+                            disabled={loadingContab[c.id]}
+                            onChange={e => toggleContabilizado(c.id, e.target.checked)}
+                            style={{ width: 18, height: 18, cursor: "pointer", accentColor: "#16a34a" }}
+                          />
+                        </div>
+                        {/* Cliente info */}
+                        <div>
+                          <p style={{ fontWeight: 600, fontSize: 14, color: "#111" }}>
+                            {c.nombre} {c.apellidos}
+                          </p>
+                          <p style={{ fontSize: 12, color: "#9ca3af" }}>
+                            {c.agente?.name || "—"} · {c.paquete?.nombre || "—"} · {formatDate(c.creadoEn)}
+                          </p>
+                          {esContabilizado && contab?.contabilizadoEn && (
+                            <p style={{ fontSize: 11, color: "#16a34a", fontWeight: 600 }}>
+                              ✅ Contabilizado el {formatDate(contab.contabilizadoEn)}
+                            </p>
+                          )}
+                        </div>
+                        {/* Estado */}
+                        <div>
+                          <span style={{
+                            padding: "3px 10px", borderRadius: 99, fontSize: 11, fontWeight: 700,
+                            background: c.estado === "pagado" || c.estado === "activo" ? "#dcfce7" : "#fef3c7",
+                            color: c.estado === "pagado" || c.estado === "activo" ? "#166534" : "#92400e",
+                          }}>
+                            {c.estado === "pagado" || c.estado === "activo" ? "Pagado" : "Pendiente"}
+                          </span>
+                        </div>
+                        {/* Monto */}
+                        <div style={{ textAlign: "right" }}>
+                          <p style={{ fontWeight: 700, color: "#16a34a", fontSize: 14 }}>
+                            {formatCurrency(totalPagado)}
+                          </p>
+                          <p style={{ fontSize: 11, color: "#9ca3af" }}>{c.moneda}</p>
+                        </div>
+                        {/* Comentario */}
+                        <div>
+                          <input
+                            value={comentarioActual}
+                            onChange={e => setComentariosAbiertos(p => ({ ...p, [c.id]: e.target.value }))}
+                            onBlur={() => {
+                              if (comentarioActual !== (contab?.comentario || "")) {
+                                toggleContabilizado(c.id, esContabilizado);
+                              }
+                            }}
+                            placeholder="Comentario opcional..."
+                            style={{
+                              width: "100%", padding: "6px 10px", borderRadius: 8,
+                              border: "1.5px solid #e0e0e8", fontSize: 12,
+                              fontFamily: "inherit", outline: "none", boxSizing: "border-box" as const,
+                            }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 

@@ -359,3 +359,36 @@ export const docSolicitudHistorial = pgTable("doc_solicitud_historial", {
 
 export type DocSolicitud = typeof docSolicitud.$inferSelect;
 export type DocSolicitudHistorial = typeof docSolicitudHistorial.$inferSelect;
+
+// ─── Contabilidad de clientes ─────────────────────────────────────────────────
+
+export const contabilidadCliente = pgTable("contabilidad_cliente", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  clienteId: uuid("cliente_id").notNull().references(() => cliente.id, { onDelete: "cascade" }).unique(),
+  contabilizado: boolean("contabilizado").notNull().default(false),
+  comentario: text("comentario"),
+  contabilizadoEn: timestamp("contabilizado_en"),
+  contabilizadoPor: text("contabilizado_por").references(() => user.id),
+  creadoEn: timestamp("creado_en").notNull().defaultNow(),
+  actualizadoEn: timestamp("actualizado_en").notNull().defaultNow(),
+});
+
+export type ContabilidadCliente = typeof contabilidadCliente.$inferSelect;
+
+// ─── Validación de vuelos ─────────────────────────────────────────────────────
+
+export const validacionVuelos = pgTable("validacion_vuelos", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  clienteId: uuid("cliente_id").notNull().references(() => cliente.id, { onDelete: "cascade" }).unique(),
+  idaConfirmada: boolean("ida_confirmada").notNull().default(false),
+  idaComentario: text("ida_comentario"),
+  idaConfirmadaEn: timestamp("ida_confirmada_en"),
+  vueltaConfirmada: boolean("vuelta_confirmada").notNull().default(false),
+  vueltaComentario: text("vuelta_comentario"),
+  vueltaConfirmadaEn: timestamp("vuelta_confirmada_en"),
+  actualizadoPor: text("actualizado_por").references(() => user.id),
+  creadoEn: timestamp("creado_en").notNull().defaultNow(),
+  actualizadoEn: timestamp("actualizado_en").notNull().defaultNow(),
+});
+
+export type ValidacionVuelos = typeof validacionVuelos.$inferSelect;

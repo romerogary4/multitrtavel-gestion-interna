@@ -1,5 +1,5 @@
 import { relations } from "drizzle-orm";
-import { user, cliente, paquete, documento, servicioEspecial, cuadreDiario, pagoCliente, devolucion, notificacion, tarea, docSolicitud, docSolicitudHistorial } from "./schema";
+import { user, cliente, paquete, documento, servicioEspecial, cuadreDiario, pagoCliente, devolucion, notificacion, tarea, docSolicitud, docSolicitudHistorial, contabilidadCliente, validacionVuelos } from "./schema";
 
 export const userRelations = relations(user, ({ many }) => ({
   clientesComoAgente: many(cliente, { relationName: "agente" }),
@@ -21,6 +21,8 @@ export const clienteRelations = relations(cliente, ({ one, many }) => ({
   documentos: many(documento),
   serviciosEspeciales: many(servicioEspecial),
   pagos: many(pagoCliente),
+  contabilidad: many(contabilidadCliente),
+  validacionVuelos: many(validacionVuelos),
   devoluciones: many(devolucion),
 }));
 
@@ -66,4 +68,14 @@ export const docSolicitudRelations = relations(docSolicitud, ({ one, many }) => 
 export const docSolicitudHistorialRelations = relations(docSolicitudHistorial, ({ one }) => ({
   solicitud: one(docSolicitud, { fields: [docSolicitudHistorial.solicitudId], references: [docSolicitud.id] }),
   creadoPorUser: one(user, { fields: [docSolicitudHistorial.creadoPor], references: [user.id] }),
+}));
+
+export const contabilidadClienteRelations = relations(contabilidadCliente, ({ one }) => ({
+  cliente: one(cliente, { fields: [contabilidadCliente.clienteId], references: [cliente.id] }),
+  contabilizadoPorUser: one(user, { fields: [contabilidadCliente.contabilizadoPor], references: [user.id] }),
+}));
+
+export const validacionVuelosRelations = relations(validacionVuelos, ({ one }) => ({
+  cliente: one(cliente, { fields: [validacionVuelos.clienteId], references: [cliente.id] }),
+  actualizadoPorUser: one(user, { fields: [validacionVuelos.actualizadoPor], references: [user.id] }),
 }));
