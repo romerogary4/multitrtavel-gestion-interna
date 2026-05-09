@@ -69,6 +69,7 @@ export async function GET(request: NextRequest) {
     const agentes = await db.select({
       agenteId: cliente.agenteId,
       agenteName: user.name,
+      agenteEmail: user.email,
       totalClientes: sql<number>`count(distinct ${cliente.id})`,
       clientesActivos: sql<number>`count(distinct ${cliente.id}) filter (where ${cliente.estado} in ('pagado','activo') and ${cliente.estado} != 'devuelto')`,
       totalIngresos: sql<number>`coalesce(sum(${pagoCliente.monto}::numeric) filter (where ${pagoCliente.confirmado} = true),0)`,
@@ -77,8 +78,8 @@ export async function GET(request: NextRequest) {
       .leftJoin(user, eq(cliente.agenteId, user.id))
       .leftJoin(pagoCliente, eq(pagoCliente.clienteId, cliente.id))
       .where(where)
-      .groupBy(cliente.agenteId, user.name);
-    return NextResponse.json(agentes.filter((a: any) => a.agenteName));
+      .groupBy(cliente.agenteId, user.name, user.email);
+    return NextResponse.json(agentes.filter((a: any) => a.agenteName && a.agenteEmail !== 'administrador@multitravel.es'));
   }
 
   return NextResponse.json({ error: "tipo inválido" }, { status: 400 });

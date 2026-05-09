@@ -221,53 +221,102 @@ export default function ReportesPage() {
           </div>
 
           {/* Rendimiento agentes */}
-          {esAdmin && agentes.length > 0 && (
-            <div className="card" style={{ overflow: "hidden", marginBottom: 24 }}>
-              <div style={{ padding: "18px 20px", borderBottom: "1px solid #f0f0f0" }}>
-                <h3 style={{
-                  fontFamily: "var(--font-playfair)", fontWeight: 700, fontSize: 15, color: "#0f0f0f",
-                  display: "flex", alignItems: "center", gap: 8
+          {esAdmin && agentes.length > 0 && (() => {
+            const ranking = [...agentes].sort((a, b) => Number(b.totalIngresos) - Number(a.totalIngresos));
+            const maxIngresos = Number(ranking[0]?.totalIngresos || 1);
+            const medallas = ["🥇", "🥈", "🥉"];
+            const frases = [
+              "¡Campeón! Eres el número 1, sigue imparable. 🔥",
+              "¡Muy cerca del top! Un empujón más y llegas. 💪",
+              "¡En el podio! Sigue así y nadie te para. 🚀",
+            ];
+            return (
+              <div style={{ marginBottom: 24, borderRadius: 20, overflow: "hidden", boxShadow: "0 4px 24px rgba(0,0,0,0.08)" }}>
+                {/* Header */}
+                <div style={{
+                  background: "linear-gradient(135deg, #cc1111 0%, #7c3aed 100%)",
+                  padding: "22px 28px", display: "flex", alignItems: "center", justifyContent: "space-between"
                 }}>
-                  <span style={{ width: 3, height: 18, background: "#cc1111", borderRadius: 4, display: "block" }} />
-                  Rendimiento por agente
-                </h3>
-              </div>
-              <table className="data-table">
-                <thead><tr>
-                  <th>Agente</th>
-                  <th style={{ textAlign: "center" }}>Total clientes</th>
-                  <th style={{ textAlign: "center" }}>Pagados</th>
-                  <th style={{ textAlign: "right" }}>Ingresos generados</th>
-                </tr></thead>
-                <tbody>
-                  {agentes.map(a => (
-                    <tr key={a.agenteId}>
-                      <td>
-                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <div>
+                    <h3 style={{ color: "white", fontFamily: "var(--font-playfair)", fontWeight: 800, fontSize: 20, marginBottom: 4 }}>
+                      🏆 Ranking de Agentes
+                    </h3>
+                    <p style={{ color: "rgba(255,255,255,0.75)", fontSize: 13 }}>
+                      Clasificación por ingresos generados{desde || hasta ? " en el período seleccionado" : ""}
+                    </p>
+                  </div>
+                  <div style={{ fontSize: 52 }}>🎯</div>
+                </div>
+
+                {/* Filas */}
+                <div style={{ background: "white" }}>
+                  {ranking.map((a, i) => {
+                    const pct = maxIngresos > 0 ? (Number(a.totalIngresos) / maxIngresos) * 100 : 0;
+                    const isPrimero = i === 0;
+                    const barColor = i === 0 ? "#f59e0b" : i === 1 ? "#94a3b8" : i === 2 ? "#cd7c2f" : "#cc1111";
+                    const rowBg = isPrimero ? "linear-gradient(90deg,#fffbeb,#fef9c3)" : "white";
+                    return (
+                      <div key={a.agenteId} style={{
+                        padding: "18px 28px",
+                        background: rowBg,
+                        borderBottom: i < ranking.length - 1 ? "1px solid #f0f0f0" : "none",
+                      }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 10 }}>
+                          {/* Posición */}
+                          <div style={{ fontSize: i < 3 ? 34 : 18, minWidth: 44, textAlign: "center", fontWeight: 800, color: "#9ca3af" }}>
+                            {i < 3 ? medallas[i] : `#${i + 1}`}
+                          </div>
+                          {/* Avatar */}
                           <div style={{
-                            width: 34, height: 34, borderRadius: 10,
-                            background: "linear-gradient(135deg,#cc1111,#e52222)",
-                            color: "white", display: "flex", alignItems: "center",
-                            justifyContent: "center", fontWeight: 800, fontSize: 13
+                            width: isPrimero ? 52 : 40, height: isPrimero ? 52 : 40, borderRadius: 14, flexShrink: 0,
+                            background: isPrimero ? "linear-gradient(135deg,#f59e0b,#d97706)" : "linear-gradient(135deg,#cc1111,#e52222)",
+                            color: "white", display: "flex", alignItems: "center", justifyContent: "center",
+                            fontWeight: 800, fontSize: isPrimero ? 20 : 15,
+                            boxShadow: isPrimero ? "0 6px 18px rgba(245,158,11,0.45)" : "0 2px 8px rgba(204,17,17,0.2)",
                           }}>
                             {a.agenteName?.charAt(0)}
                           </div>
-                          <span style={{ fontWeight: 600, color: "#111" }}>{a.agenteName}</span>
+                          {/* Info */}
+                          <div style={{ flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                              <p style={{ fontWeight: 800, fontSize: isPrimero ? 17 : 14, color: "#0f0f0f" }}>{a.agenteName}</p>
+                              {isPrimero && (
+                                <span style={{ fontSize: 10, fontWeight: 700, background: "#f59e0b", color: "white", padding: "2px 8px", borderRadius: 99 }}>
+                                  LÍDER
+                                </span>
+                              )}
+                            </div>
+                            <p style={{ fontSize: 12, color: "#9ca3af" }}>
+                              {a.totalClientes} clientes · {a.clientesActivos} pagados
+                            </p>
+                            {i < 3 && (
+                              <p style={{ fontSize: 11, color: "#7c3aed", fontWeight: 600, marginTop: 3 }}>
+                                {frases[i]}
+                              </p>
+                            )}
+                          </div>
+                          {/* Ingresos */}
+                          <div style={{ textAlign: "right" }}>
+                            <p style={{ fontWeight: 800, fontSize: isPrimero ? 20 : 16, color: isPrimero ? "#d97706" : "#cc1111" }}>
+                              {formatCurrency(a.totalIngresos)}
+                            </p>
+                            <p style={{ fontSize: 11, color: "#9ca3af" }}>ingresos</p>
+                          </div>
                         </div>
-                      </td>
-                      <td style={{ textAlign: "center", fontWeight: 600 }}>{a.totalClientes}</td>
-                      <td style={{ textAlign: "center" }}>
-                        <span className="badge badge-activo">{a.clientesActivos}</span>
-                      </td>
-                      <td style={{ textAlign: "right", fontWeight: 700, color: "#cc1111" }}>
-                        {formatCurrency(a.totalIngresos)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+                        {/* Barra de progreso */}
+                        <div style={{ marginLeft: 60, height: 6, background: "#f0f0f0", borderRadius: 99, overflow: "hidden" }}>
+                          <div style={{
+                            height: "100%", width: `${pct}%`, borderRadius: 99,
+                            background: barColor, transition: "width 0.8s ease",
+                          }} />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* ── Registro de ventas ───────────────────────────────────────── */}
           {esAdmin && (
