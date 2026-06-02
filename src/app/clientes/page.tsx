@@ -38,11 +38,8 @@ function getFiltrosGuardados() {
   } catch { return null; }
 }
 
-// ── Componente validación vuelos ──────────────────────────────────────────────
 function ValidacionVuelosCell({ clienteId, validacion, canEdit }: {
-  clienteId: string;
-  validacion?: ValidacionVuelo;
-  canEdit: boolean;
+  clienteId: string; validacion?: ValidacionVuelo; canEdit: boolean;
 }) {
   const [ida, setIda] = useState(validacion?.idaConfirmada || false);
   const [vuelta, setVuelta] = useState(validacion?.vueltaConfirmada || false);
@@ -64,63 +61,37 @@ function ValidacionVuelosCell({ clienteId, validacion, canEdit }: {
   return (
     <div onClick={e => e.stopPropagation()} style={{ minWidth: 160 }}>
       <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-        {/* Ida */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <input
-            type="checkbox"
-            checked={ida}
-            disabled={!canEdit || saving}
-            onChange={async e => {
-              setIda(e.target.checked);
-              await guardar("ida", e.target.checked, idaComentario);
-            }}
-            style={{ width: 15, height: 15, cursor: canEdit ? "pointer" : "default", accentColor: "#2563eb" }}
-          />
+          <input type="checkbox" checked={ida} disabled={!canEdit || saving}
+            onChange={async e => { setIda(e.target.checked); await guardar("ida", e.target.checked, idaComentario); }}
+            style={{ width: 15, height: 15, cursor: canEdit ? "pointer" : "default", accentColor: "#2563eb" }} />
           <span style={{ fontSize: 12, color: ida ? "#2563eb" : "#9ca3af", fontWeight: ida ? 600 : 400 }}>
             ✈️ Ida {ida ? "✓" : ""}
           </span>
         </div>
-        {/* Vuelta */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <input
-            type="checkbox"
-            checked={vuelta}
-            disabled={!canEdit || saving}
-            onChange={async e => {
-              setVuelta(e.target.checked);
-              await guardar("vuelta", e.target.checked, vueltaComentario);
-            }}
-            style={{ width: 15, height: 15, cursor: canEdit ? "pointer" : "default", accentColor: "#16a34a" }}
-          />
+          <input type="checkbox" checked={vuelta} disabled={!canEdit || saving}
+            onChange={async e => { setVuelta(e.target.checked); await guardar("vuelta", e.target.checked, vueltaComentario); }}
+            style={{ width: 15, height: 15, cursor: canEdit ? "pointer" : "default", accentColor: "#16a34a" }} />
           <span style={{ fontSize: 12, color: vuelta ? "#16a34a" : "#9ca3af", fontWeight: vuelta ? 600 : 400 }}>
             🔄 Vuelta {vuelta ? "✓" : ""}
           </span>
         </div>
       </div>
-      {/* Comentarios expandibles — solo si puede editar */}
       {canEdit && (
         <div style={{ marginTop: 4 }}>
-          <button
-            onClick={() => setExpanded(v => !v)}
+          <button onClick={() => setExpanded(v => !v)}
             style={{ fontSize: 10, color: "#9ca3af", background: "none", border: "none", cursor: "pointer", padding: 0, fontFamily: "inherit" }}>
             {expanded ? "▲ ocultar" : "▼ comentarios"}
           </button>
           {expanded && (
             <div style={{ marginTop: 4, display: "flex", flexDirection: "column", gap: 4 }}>
-              <input
-                value={idaComentario}
-                onChange={e => setIdaComentario(e.target.value)}
-                onBlur={() => guardar("ida", ida, idaComentario)}
-                placeholder="Nota ida..."
-                style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid #e0e0e8", fontFamily: "inherit", outline: "none" }}
-              />
-              <input
-                value={vueltaComentario}
-                onChange={e => setVueltaComentario(e.target.value)}
-                onBlur={() => guardar("vuelta", vuelta, vueltaComentario)}
-                placeholder="Nota vuelta..."
-                style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid #e0e0e8", fontFamily: "inherit", outline: "none" }}
-              />
+              <input value={idaComentario} onChange={e => setIdaComentario(e.target.value)}
+                onBlur={() => guardar("ida", ida, idaComentario)} placeholder="Nota ida..."
+                style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid #e0e0e8", fontFamily: "inherit", outline: "none" }} />
+              <input value={vueltaComentario} onChange={e => setVueltaComentario(e.target.value)}
+                onBlur={() => guardar("vuelta", vuelta, vueltaComentario)} placeholder="Nota vuelta..."
+                style={{ fontSize: 11, padding: "3px 6px", borderRadius: 6, border: "1px solid #e0e0e8", fontFamily: "inherit", outline: "none" }} />
             </div>
           )}
         </div>
@@ -151,9 +122,7 @@ export default function ClientesPage() {
   const [total, setTotal] = useState(0);
   const [paqueteId, setPaqueteId] = useState(saved?.paqueteId || "todos");
   const [paquetes, setPaquetes] = useState<Paquete[]>([]);
-  const [mostrarFiltrosFecha, setMostrarFiltrosFecha] = useState(
-    !!(saved?.salidaDesde || saved?.salidaHasta)
-  );
+  const [mostrarFiltrosFecha, setMostrarFiltrosFecha] = useState(!!(saved?.salidaDesde || saved?.salidaHasta));
   const POR_PAG = 15;
 
   useEffect(() => {
@@ -163,9 +132,7 @@ export default function ClientesPage() {
 
   useEffect(() => {
     try {
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({
-        busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta, pagina
-      }));
+      sessionStorage.setItem(STORAGE_KEY, JSON.stringify({ busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta, pagina }));
     } catch { }
   }, [busqueda, estado, pago, paqueteId, salidaDesde, salidaHasta, pagina]);
 
@@ -193,9 +160,7 @@ export default function ClientesPage() {
     try { sessionStorage.removeItem(STORAGE_KEY); } catch { }
   }
 
-  function limpiarFechas() {
-    setSalidaDesde(""); setSalidaHasta(""); setPagina(1);
-  }
+  function limpiarFechas() { setSalidaDesde(""); setSalidaHasta(""); setPagina(1); }
 
   const hayFiltroFecha = salidaDesde || salidaHasta;
   const hayAlgunFiltro = busqueda || estado !== "todos" || pago !== "todos" || paqueteId !== "todos" || hayFiltroFecha;
@@ -211,6 +176,16 @@ export default function ClientesPage() {
     padding: "9px 14px", borderRadius: 12, border: "1.5px solid #e0e0e8",
     fontSize: 13, fontFamily: "inherit", outline: "none", background: "white",
     color: "#374151", cursor: "pointer",
+  };
+
+  // Fix temblor: estilo de fila estable sin hover que cambie altura
+  const trStyle: React.CSSProperties = {
+    cursor: "pointer",
+    height: 64,
+  };
+
+  const tdStyle: React.CSSProperties = {
+    verticalAlign: "middle",
   };
 
   return (
@@ -262,12 +237,9 @@ export default function ClientesPage() {
         </div>
 
         {mostrarFiltrosFecha && (
-          <div style={{
-            marginTop: 12, paddingTop: 12, borderTop: "1px solid #f0f0f0",
-            display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap"
-          }}>
+          <div style={{ marginTop: 12, paddingTop: 12, borderTop: "1px solid #f0f0f0", display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
             <span style={{ fontSize: 12, fontWeight: 700, color: "#9ca3af", textTransform: "uppercase", letterSpacing: "0.06em" }}>
-              Fecha de salida
+              Fecha de vuelo
             </span>
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <label style={{ fontSize: 12, color: "#6b7280" }}>Desde</label>
@@ -297,7 +269,7 @@ export default function ClientesPage() {
               <p>No se encontraron clientes</p>
             </div>
           ) : (
-            <table className="data-table">
+            <table className="data-table" style={{ tableLayout: "fixed" }}>
               <thead>
                 <tr>
                   <th>Cliente</th>
@@ -314,9 +286,8 @@ export default function ClientesPage() {
               </thead>
               <tbody>
                 {clientes.map(c => (
-                  <tr key={c.id} style={{ cursor: "pointer" }}
-                    onClick={() => router.push(`/clientes/${c.id}`)}>
-                    <td>
+                  <tr key={c.id} style={trStyle} onClick={() => router.push(`/clientes/${c.id}`)}>
+                    <td style={tdStyle}>
                       <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                         <div style={{
                           width: 38, height: 38, borderRadius: 10, flexShrink: 0,
@@ -332,15 +303,15 @@ export default function ClientesPage() {
                         </div>
                       </div>
                     </td>
-                    <td>
+                    <td style={tdStyle}>
                       <p style={{ fontSize: 13, color: "#374151" }}>{c.telefono}</p>
                       {c.email && <p style={{ fontSize: 12, color: "#9ca3af" }}>{c.email}</p>}
                     </td>
-                    <td style={{ fontSize: 13, color: "#374151" }}>{c.paquete?.nombre || "—"}</td>
-                    <td style={{ fontSize: 13, color: "#374151", fontWeight: c.localizador ? 600 : 400 }}>
+                    <td style={{ ...tdStyle, fontSize: 13, color: "#374151" }}>{c.paquete?.nombre || "—"}</td>
+                    <td style={{ ...tdStyle, fontSize: 13, color: "#374151", fontWeight: c.localizador ? 600 : 400 }}>
                       {c.localizador || "—"}
                     </td>
-                    <td>
+                    <td style={tdStyle}>
                       {c.fechaSalida ? (
                         <div>
                           <p style={{ fontSize: 13, fontWeight: 600, color: "#374151" }}>{formatFecha(c.fechaSalida)}</p>
@@ -350,16 +321,16 @@ export default function ClientesPage() {
                         <span style={{ fontSize: 13, color: "#d1d5db" }}>—</span>
                       )}
                     </td>
-                    {esAdmin && <td style={{ fontSize: 13, color: "#374151" }}>{c.agente?.name || "—"}</td>}
-                    <td style={{ fontSize: 13, color: "#374151", textTransform: "capitalize" }}>{c.formaPago || "—"}</td>
-                    <td style={{ textAlign: "right", fontWeight: 700, color: "#cc1111" }}>
+                    {esAdmin && <td style={{ ...tdStyle, fontSize: 13, color: "#374151" }}>{c.agente?.name || "—"}</td>}
+                    <td style={{ ...tdStyle, fontSize: 13, color: "#374151", textTransform: "capitalize" }}>{c.formaPago || "—"}</td>
+                    <td style={{ ...tdStyle, textAlign: "right", fontWeight: 700, color: "#cc1111" }}>
                       {c.montoPagado ? formatCurrency(c.montoPagado) : "—"}
                     </td>
-                    <td style={{ textAlign: "center" }}>
+                    <td style={{ ...tdStyle, textAlign: "center" }}>
                       <span className={`badge badge-${c.estado}`}>{estadoLabel[c.estado] || c.estado}</span>
                     </td>
                     {verValidacionVuelos && (
-                      <td style={{ textAlign: "center" }}>
+                      <td style={{ ...tdStyle, textAlign: "center" }}>
                         <ValidacionVuelosCell
                           clienteId={c.id}
                           validacion={c.validacionVuelos?.[0]}

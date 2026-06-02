@@ -4,7 +4,7 @@ import { cliente, paquete, pagoCliente } from "@/db/schema";
 import { getServerSession } from "@/lib/auth-helpers";
 import type { AppSession } from "@/types";
 import { saveFile, ALLOWED_IMAGE_TYPES, ALLOWED_DOC_TYPES, validateFile } from "@/lib/upload";
-import { eq, desc, and, gte, lte, sql } from "drizzle-orm";
+import { eq, desc, and, gte, lte, sql, or } from "drizzle-orm";
 import { crearNotificacion } from "@/lib/notificaciones";
 
 export async function GET(request: NextRequest) {
@@ -21,8 +21,7 @@ export async function GET(request: NextRequest) {
   const salidaDesde = searchParams.get("salidaDesde");
   const salidaHasta = searchParams.get("salidaHasta");
   const pagina = parseInt(searchParams.get("pagina") || "1");
-  const limite = Math.min(parseInt(searchParams.get("limite") || "20"), 100); // máx 100 por página
-  // agente y agente_doc solo ven sus clientes; agente_clientes y admin ven todos
+  const limite = Math.min(parseInt(searchParams.get("limite") || "20"), 100);
   const conVuelos = searchParams.get("conVuelos") === "1";
   const soloSusClientes = ["agente", "agente_doc"].includes(session.user.rol);
 
@@ -33,8 +32,30 @@ export async function GET(request: NextRequest) {
   if (paqueteId) conditions.push(eq(cliente.paqueteId, paqueteId));
   if (desde) conditions.push(gte(cliente.creadoEn, new Date(desde)));
   if (hasta) conditions.push(lte(cliente.creadoEn, new Date(hasta)));
-  if (salidaDesde) conditions.push(gte(cliente.fechaSalida, new Date(salidaDesde)));
-  if (salidaHasta) { const h = new Date(salidaHasta); h.setHours(23, 59, 59, 999); conditions.push(lte(cliente.fechaSalida, h)); }
+
+  // Filtro de vuelos: mostrar clientes cuya fecha de SALIDA o REGRESO esté en el rango
+  if (salidaDesde || salidaHasta) {
+    const desdeDate = salidaDesde ? new Date(salidaDesde) : null;
+    const hastaDate = salidaHasta ? (() => { const h = new Date(salidaHasta); h.setHours(23, 59, 59, 999); return h; })() : null;
+
+    const salidaConditions = [];
+    const regresoConditions = [];
+
+    if (desdeDate) {
+      salidaConditions.push(gte(cliente.fechaSalida, desdeDate));
+      regresoConditions.push(gte(cliente.fechaRegreso, desdeDate));
+    }
+    if (hastaDate) {
+      salidaConditions.push(lte(cliente.fechaSalida, hastaDate));
+      regresoConditions.push(lte(cliente.fechaRegreso, hastaDate));
+    }
+
+    const salidaWhere = salidaConditions.length > 1 ? and(...salidaConditions) : salidaConditions[0];
+    const regresoWhere = regresoConditions.length > 1 ? and(...regresoConditions) : regresoConditions[0];
+
+    conditions.push(or(salidaWhere!, regresoWhere!)!);
+  }
+
   if (busqueda) {
     conditions.push(sql`(${cliente.nombre} ILIKE ${"%" + busqueda + "%"} OR ${cliente.apellidos} ILIKE ${"%" + busqueda + "%"} OR ${cliente.email} ILIKE ${"%" + busqueda + "%"} OR ${cliente.telefono} ILIKE ${"%" + busqueda + "%"})`);
   }
@@ -88,20 +109,13 @@ export async function POST(request: NextRequest) {
     const montoPagadoNum = Number(montoPagado || 0);
     const pagado = tipoPago === "completo" || montoPagadoNum >= montoTotalNum;
 
-    // Estado inicial:
-    // - sin pago definido → pendiente_pago
-    // - plan de pagos incompleto → pendiente_pago (con primer abono registrado)
-    // - pagó algo o pago completo → pendiente_confirmacion (admin debe confirmar)
     let estado: "pendiente_pago" | "pendiente_confirmacion" | "pagado" | "cancelado" | "pendiente" | "pendiente_admin" | "activo" | "devuelto" = "pendiente_pago";
     if (formaPago && montoPagadoNum > 0) {
-      // Cualquier pago inicial (completo o primer abono de plan de pagos)
-      // → pendiente_confirmacion para que el admin revise
       estado = "pendiente_confirmacion";
     } else if (formaPago && montoPagadoNum === 0) {
       estado = "pendiente_pago";
     }
 
-    // Subir imagen documento
     let imagenDocumento: string | undefined;
     const imagenFile = formData.get("imagenDocumento") as File | null;
     if (imagenFile && imagenFile.size > 0) {
@@ -112,7 +126,6 @@ export async function POST(request: NextRequest) {
       imagenDocumento = saved.rutaArchivo;
     }
 
-    // Crear cliente
     const [nuevoCliente] = await db.insert(cliente).values({
       nombre, apellidos, email: email || undefined, telefono,
       direccion: direccion || undefined, nacionalidad: nacionalidad || undefined,
@@ -130,7 +143,6 @@ export async function POST(request: NextRequest) {
       adminId: !esAgente ? session.user.id : undefined,
     }).returning();
 
-    // Registrar primer pago si hay monto
     if (montoPagado && Number(montoPagado) > 0 && formaPago) {
       const comprobanteFile = formData.get("comprobantePago") as File | null;
       let comprobanteRuta: string | undefined;
@@ -149,7 +161,6 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Notificar al admin: nuevo cliente
     await crearNotificacion({
       tipo: "cliente_nuevo",
       titulo: "Nuevo cliente registrado",
